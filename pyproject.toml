@@ -1,7 +1,7 @@
 [project]
-name = "src"
+name = "league-multi-tool-llm-agent"
 version = "0.1.0"
-description = "Add your description here"
+description = "A graph-based, tool-augmented LLM assistant for League of Legends."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
