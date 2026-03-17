@@ -1,0 +1,79 @@
+version: "3.5"
+name: league-multi-tool-llm-agent-dev
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    # container_name: league-multi-tool-llm-agent-dev
+    volumes:
+      - ..:/home/dev/src:cached
+      # Use a uv cache volume mounted to /home/vscode/.cache/uv so installs are fast across container rebuilds.
+      - uv-cache-league-multi-tool-llm-agent:/home/vscode/.cache/uv
+    # GPU access for the devcontainer
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [ gpu ]
+    environment:
+      # Convenience env vars for your app to reach Milvus within the compose network
+      PGVECTOR_DEV_HOST: postgres
+      PGVECTOR_DEV_PORT: "5432"
+      PGVECTOR_DEV_USER: league
+      PGVECTOR_DEV_PASSWORD: league
+      PGVECTOR_DEV_DB: league
+    depends_on:
+      - postgres
+      - ollama
+    command: sleep infinity
+    networks:
+      - league-multi-tool-llm-agent-network
+    # env_file:
+    #   - ../.env
+
+  postgres:
+    # container_name: postgres-league-multi-tool-llm-agent
+    image: pgvector/pgvector:pg14
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: league
+      POSTGRES_PASSWORD: league
+      POSTGRES_DB: league
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-league-multi-tool-llm-agent:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U league -d league" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - league-multi-tool-llm-agent-network
+  
+  ollama:
+    build:
+      context: ../ollama
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama # cache models here
+    gpus: all
+    networks:
+      - league-multi-tool-llm-agent-network
+
+volumes:
+  uv-cache-league-multi-tool-llm-agent:
+  postgres-league-multi-tool-llm-agent:
+  ollama-models:
+
+
+networks:
+  league-multi-tool-llm-agent-network:
+    name: league-multi-tool-llm-agent-network

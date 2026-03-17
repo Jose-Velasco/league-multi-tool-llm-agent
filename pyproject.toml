@@ -1,0 +1,53 @@
+[project]
+name = "src"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "asyncpg>=0.31.0",
+    "beautifulsoup4>=4.14.3",
+    "gradio>=6.9.0",
+    "httpx>=0.28.1",
+    "ipykernel>=7.2.0",
+    "litellm>=1.82.3",
+    "lxml>=6.0.2",
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.3",
+    "pandas>=3.0.1",
+    "pgvector>=0.4.2",
+    "psycopg2-binary>=2.9.11",
+    "pydantic>=2.12.5",
+    "pydantic-ai>=1.69.0",
+    "pydantic-graph>=1.69.0",
+    "pydantic-settings>=2.13.1",
+    "requests>=2.32.5",
+    "scipy>=1.17.1",
+    "scrapy>=2.14.2",
+    "seaborn>=0.13.2",
+    "sqlalchemy>=2.0.48",
+    "sqlmodel>=0.0.37",
+    "tqdm>=4.67.3",
+    "typing-extensions>=4.15.0",
+]
+
+[tool.uv.pip]
+extra-index-url = ["https://download.pytorch.org/whl/cu126"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+# Enable common, sane rules
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # import sorting
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+]
+
+ignore = [
+    "E501", # line length handled by formatter
+]
