@@ -98,9 +98,9 @@ class ChampionImagePipeline(ImagesPipeline):
             return item
 
         downloaded_by_url = {
-            result["url"]: result["path"]
+            result["url"]: result["path"]  # pyright: ignore[reportIndexIssue]
             for success, result in results
-            if success and "url" in result and "path" in result
+            if success and "url" in result and "path" in result  # pyright: ignore[reportOperatorIssue]
         }
 
         # Attach champion profile local path
@@ -176,33 +176,3 @@ class ToJsonPipeline:
         if isinstance(item, Champion):
             return item.model_dump(mode="json")
         return item
-
-
-# from pathlib import Path, PurePosixPath
-
-# from scrapy.http import Request
-# from scrapy.pipelines.images import ImagesPipeline
-# from scrapy.utils.httpobj import urlparse_cached
-
-# from league_multi_tool_llm_agent.models.champion import (
-#     Champion,
-#     ChampionSkin,
-# )
-
-
-# class ChampionImagePipeline(ImagesPipeline):
-#     def file_path(self, request: Request, response=None, info=None, *, item=None):
-#         ROOT_IMAGE_DIR = "./data/images"
-#         file_extension = PurePosixPath(urlparse_cached(request).path).suffix
-#         if isinstance(item, Champion):
-#             champion_name = item.name
-#             champion_img_dir = Path(f"{ROOT_IMAGE_DIR}/{champion_name}{file_extension}")
-#             return str(champion_img_dir)
-#         if isinstance(item, ChampionSkin):
-#             champion_name = item.champion_name
-#             skin_name = item.skin_name
-#             champion_img_dir = Path(
-#                 f"{ROOT_IMAGE_DIR}/{champion_name}/{skin_name}{file_extension}"
-#             )
-#             return str(champion_img_dir)
-#         return super().file_path(request, response, info, item=item)

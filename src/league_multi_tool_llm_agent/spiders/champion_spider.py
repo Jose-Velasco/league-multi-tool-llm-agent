@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import scrapy
@@ -47,7 +48,10 @@ class ChampionSpider(scrapy.Spider):
         spider = super().from_crawler(crawler, *args, **kwargs)
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        log_file = f"./data/logs/{spider.name}_{timestamp}.log"
+        log_dir = Path("./data/logs")
+        log_dir.mkdir(parents=True, exist_ok=True)  # create dirs if missing
+        log_file = log_dir / f"{spider.name}_{timestamp}.log"
+        # log_file = f"./data/logs/{spider.name}_{timestamp}.log"
 
         crawler.settings.set("LOG_FILE", log_file, priority="spider")
 
@@ -84,7 +88,7 @@ class ChampionSpider(scrapy.Spider):
             }
             champions[champion["name"]] = champion
 
-        for champion_name, champion_data in champions.items():
+        for _champion_name, champion_data in champions.items():
             champ_details_req = scrapy.Request(
                 url=champion_data["official_lol_profile_details_website_url"],
                 callback=self.get_champion_details,
