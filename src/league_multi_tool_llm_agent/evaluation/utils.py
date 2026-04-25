@@ -73,3 +73,22 @@ def save_eval_results(
     print(f"\nSaved detailed results to: {detailed_path}")
     print(f"Saved manual grading sheet to: {manual_path}")
     print(f"Saved summary results to: {summary_path}")
+
+
+def checkpoint_results(
+    *,
+    results: list[EvalCaseResult],
+    output_dir: str,
+    label: str = "checkpoint",
+) -> None:
+    """Save partial evaluation results so crashes do not lose progress."""
+    if not results:
+        return
+
+    checkpoint_dir = Path(output_dir) / label
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+
+    save_eval_results(
+        results=results,
+        output_dir=str(checkpoint_dir),
+    )

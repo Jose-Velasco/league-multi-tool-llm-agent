@@ -16,7 +16,10 @@ from league_multi_tool_llm_agent.evaluation.agents import (
     build_recommendation_agent,
 )
 from league_multi_tool_llm_agent.evaluation.configs import EvalSettings
-from league_multi_tool_llm_agent.evaluation.utils import save_eval_results
+from league_multi_tool_llm_agent.evaluation.utils import (
+    checkpoint_results,
+    save_eval_results,
+)
 from league_multi_tool_llm_agent.models.agent_config import OllamaProviderConfig
 from league_multi_tool_llm_agent.models.rag_configs import EmbeddingSettings
 
@@ -134,20 +137,37 @@ async def run_single_eval_case(
     async with semaphore:
         start = time.perf_counter()
 
-        if use_rag:
-            if rag_service is None:
-                raise ValueError("rag_service is required when use_rag=True")
+        try:
+            if use_rag:
+                if rag_service is None:
+                    raise ValueError("rag_service is required when use_rag=True")
 
-            answer, context = await generate_rag_answer(
+                answer, context = await generate_rag_answer(
+                    query=query,
+                    agent=rec_agent,
+                    rag_service=rag_service,
+                    top_k=settings.EVAL_RAG_TOP_K,
+                )
+            else:
+                answer, context = await generate_no_rag_answer(
+                    query=query,
+                    agent=rec_agent,
+                )
+        except Exception as e:
+            latency = time.perf_counter() - start
+            return EvalCaseResult(
                 query=query,
-                agent=rec_agent,
-                rag_service=rag_service,
-                top_k=settings.EVAL_RAG_TOP_K,
-            )
-        else:
-            answer, context = await generate_no_rag_answer(
-                query=query,
-                agent=rec_agent,
+                condition=condition,
+                model_name=model_name,
+                use_rag=use_rag,
+                answer="ERROR",
+                retrieved_context="",
+                latency_seconds=latency,
+                relevance=None,
+                explanation_quality=None,
+                personalization=None,
+                groundedness=None,
+                judge_notes=f"Generation failed: {e}",
             )
 
         latency = time.perf_counter() - start
@@ -235,7 +255,7 @@ async def run_full_evaluation(
     settings: EvalSettings | None = None,
     ollama_provider_config: OllamaProviderConfig,
 ) -> list[EvalCaseResult]:
-    """Run RAG/no-RAG and small/large model ablations."""
+    """Run RAG/no-RAG and small/large model ablations with checkpointing."""
     cfg = settings or EvalSettings()
     queries = TEST_QUERIES[: cfg.EVAL_MAX_TEST_QUERIES]
 
@@ -245,44 +265,110 @@ async def run_full_evaluation(
     )
 
     conditions = [
+        {"condition": "large_rag", "model_name": cfg.EVAL_LARGE_MODEL, "use_rag": True},
+        {"condition": "small_rag", "model_name": cfg.EVAL_SMALL_MODEL, "use_rag": True},
         {
             "condition": "small_no_rag",
             "model_name": cfg.EVAL_SMALL_MODEL,
             "use_rag": False,
         },
         {
-            "condition": "small_rag",
-            "model_name": cfg.EVAL_SMALL_MODEL,
-            "use_rag": True,
-        },
-        {
             "condition": "large_no_rag",
             "model_name": cfg.EVAL_LARGE_MODEL,
             "use_rag": False,
-        },
-        {
-            "condition": "large_rag",
-            "model_name": cfg.EVAL_LARGE_MODEL,
-            "use_rag": True,
         },
     ]
 
     all_results: list[EvalCaseResult] = []
 
     for c in conditions:
-        condition_results = await run_eval_condition(
-            queries=queries,
-            condition=c["condition"],
-            model_name=c["model_name"],
-            use_rag=c["use_rag"],
-            rag_service=rag_service,
-            judge_agent=judge_agent,
-            settings=cfg,
-            ollama_provider_config=ollama_provider_config,
-        )
-        all_results.extend(condition_results)
+        try:
+            condition_results = await run_eval_condition(
+                queries=queries,
+                condition=c["condition"],
+                model_name=c["model_name"],
+                use_rag=c["use_rag"],
+                rag_service=rag_service,
+                judge_agent=judge_agent,
+                settings=cfg,
+                ollama_provider_config=ollama_provider_config,
+            )
+            all_results.extend(condition_results)
+
+            checkpoint_results(
+                results=all_results,
+                output_dir=cfg.EVAL_OUTPUT_DIR,
+                label="latest_checkpoint",
+            )
+
+        except Exception as e:
+            checkpoint_results(
+                results=all_results,
+                output_dir=cfg.EVAL_OUTPUT_DIR,
+                label="crash_checkpoint",
+            )
+            raise RuntimeError(
+                f"Evaluation crashed during condition={c['condition']}. "
+                f"Saved {len(all_results)} completed results."
+            ) from e
 
     return all_results
+
+
+# async def run_full_evaluation(
+#     *,
+#     rag_service: Any,
+#     settings: EvalSettings | None = None,
+#     ollama_provider_config: OllamaProviderConfig,
+# ) -> list[EvalCaseResult]:
+#     """Run RAG/no-RAG and small/large model ablations."""
+#     cfg = settings or EvalSettings()
+#     queries = TEST_QUERIES[: cfg.EVAL_MAX_TEST_QUERIES]
+
+#     judge_agent = build_judge_agent(
+#         cfg.EVAL_JUDGE_MODEL,
+#         ollama_provider_config=ollama_provider_config,
+#     )
+
+#     conditions = [
+#         {
+#             "condition": "small_no_rag",
+#             "model_name": cfg.EVAL_SMALL_MODEL,
+#             "use_rag": False,
+#         },
+#         {
+#             "condition": "small_rag",
+#             "model_name": cfg.EVAL_SMALL_MODEL,
+#             "use_rag": True,
+#         },
+#         {
+#             "condition": "large_no_rag",
+#             "model_name": cfg.EVAL_LARGE_MODEL,
+#             "use_rag": False,
+#         },
+#         {
+#             "condition": "large_rag",
+#             "model_name": cfg.EVAL_LARGE_MODEL,
+#             "use_rag": True,
+#         },
+#     ]
+
+#     all_results: list[EvalCaseResult] = []
+
+#     for c in conditions:
+#         condition_results = await run_eval_condition(
+#             queries=queries,
+#             condition=c["condition"],
+#             model_name=c["model_name"],
+#             use_rag=c["use_rag"],
+#             rag_service=rag_service,
+#             judge_agent=judge_agent,
+#             settings=cfg,
+#             ollama_provider_config=ollama_provider_config,
+#         )
+#         all_results.extend(condition_results)
+
+#     return all_results
 
 
 async def main() -> None:
