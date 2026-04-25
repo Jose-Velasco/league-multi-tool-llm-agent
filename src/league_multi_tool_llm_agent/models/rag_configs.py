@@ -57,6 +57,4 @@ class VisionSettings(BaseSettings):
 class RagSettings(DatabaseConfig):
     model_config = SettingsConfigDict(env_file=".env.rag", env_file_encoding="utf-8")
 
-    EMBEDDING_MODEL: str = "ollama/qwen3-embedding:0.6"
-    EMBEDDING_API_BASE: str = "http://ollama:11434"
     RAG_TOP_K: int = 5

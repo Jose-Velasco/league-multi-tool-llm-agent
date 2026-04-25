@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from litellm import aembedding
 from sqlalchemy import text
 from sqlalchemy.engine import URL
 from sqlmodel import Session, create_engine
 
+from league_multi_tool_llm_agent.db.llm_utils import EmbeddingClient
 from league_multi_tool_llm_agent.models.rag_configs import RagSettings
 from league_multi_tool_llm_agent.models.rag_models import RagSearchResult
 
@@ -15,17 +15,23 @@ from league_multi_tool_llm_agent.models.rag_models import RagSearchResult
 class RagService:
     db_url: str | URL
     settings: RagSettings
+    embedder: EmbeddingClient
 
     def __post_init__(self) -> None:
         self.engine = create_engine(self.db_url, echo=False)
 
     async def embed_query(self, query: str) -> list[float]:
-        response = await aembedding(
-            model=self.settings.EMBEDDING_MODEL,
-            input=[query],
-            api_base=self.settings.EMBEDDING_API_BASE,
-        )
-        return response["data"][0]["embedding"]
+        # assert self.embedder is not None
+        return await self.embedder.embed(query)
+
+    # async def embed_query(self, query: str) -> list[float]:
+    #     print(f"#########{self.settings}#################")
+    #     response = await aembedding(
+    #         model=self.settings.EMBEDDING_MODEL,
+    #         input=[query],
+    #         api_base=self.settings.EMBEDDING_API_BASE,
+    #     )
+    #     return response["data"][0]["embedding"]
 
     async def search(
         self,
