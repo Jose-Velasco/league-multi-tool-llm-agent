@@ -4,9 +4,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from league_multi_tool_llm_agent.evaluation.dataclasses import (
-    EvalCaseResult,
-)
+from league_multi_tool_llm_agent.evaluation.agents import EvalCaseResult
 
 
 def save_eval_results(

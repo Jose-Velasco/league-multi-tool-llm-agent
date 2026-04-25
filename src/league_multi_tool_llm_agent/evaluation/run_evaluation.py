@@ -8,14 +8,12 @@ from pydantic_ai import Agent
 from sqlalchemy import URL
 
 from league_multi_tool_llm_agent.evaluation.agents import (
+    EvalCaseResult,
+    JudgeScore,
     build_judge_agent,
     build_recommendation_agent,
 )
 from league_multi_tool_llm_agent.evaluation.configs import EvalSettings
-from league_multi_tool_llm_agent.evaluation.dataclasses import (
-    EvalCaseResult,
-    JudgeScore,
-)
 from league_multi_tool_llm_agent.evaluation.utils import save_eval_results
 from league_multi_tool_llm_agent.models.agent_config import OllamaProviderConfig
 
