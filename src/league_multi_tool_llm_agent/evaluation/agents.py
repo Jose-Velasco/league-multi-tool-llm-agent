@@ -1,15 +1,21 @@
 from __future__ import annotations
 
 from pydantic_ai import Agent
-from pydantic_ai.models.ollama import OllamaModel
 
 from league_multi_tool_llm_agent.evaluation.dataclasses import JudgeScore
+from league_multi_tool_llm_agent.graph.utils import build_ollama_agent_model
+from league_multi_tool_llm_agent.models.agent_config import OllamaProviderConfig
 
 
 # Agent Builders
-def build_recommendation_agent(model_name: str) -> Agent[None, str]:
+def build_recommendation_agent(
+    model_name: str, ollama_provider_config: OllamaProviderConfig
+) -> Agent[None, str]:
     """Build an LLM agent used to generate recommendations."""
-    model = OllamaModel(model_name=model_name)
+    model = build_ollama_agent_model(
+        model_name=model_name, ollama_provider_config=ollama_provider_config
+    )
+    # model = OllamaModel(model_name=model_name)
 
     return Agent(
         model=model,
@@ -23,9 +29,14 @@ def build_recommendation_agent(model_name: str) -> Agent[None, str]:
     )
 
 
-def build_judge_agent(model_name: str) -> Agent[None, JudgeScore]:
+def build_judge_agent(
+    model_name: str, ollama_provider_config: OllamaProviderConfig
+) -> Agent[None, JudgeScore]:
     """Build an LLM-as-judge agent for scoring outputs."""
-    model = OllamaModel(model_name=model_name)
+    # model = OllamaModel(model_name=model_name)
+    model = build_ollama_agent_model(
+        model_name=model_name, ollama_provider_config=ollama_provider_config
+    )
 
     return Agent(
         model=model,

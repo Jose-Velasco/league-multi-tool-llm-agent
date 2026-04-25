@@ -17,6 +17,7 @@ from league_multi_tool_llm_agent.evaluation.dataclasses import (
     JudgeScore,
 )
 from league_multi_tool_llm_agent.evaluation.utils import save_eval_results
+from league_multi_tool_llm_agent.models.agent_config import OllamaProviderConfig
 
 # Test Set
 
@@ -131,9 +132,12 @@ async def run_eval_condition(
     rag_service: Any | None,
     judge_agent: Agent[None, JudgeScore],
     settings: EvalSettings,
+    ollama_provider_config: OllamaProviderConfig,
 ) -> list[EvalCaseResult]:
     """Run one ablation condition across all test queries."""
-    rec_agent = build_recommendation_agent(model_name)
+    rec_agent = build_recommendation_agent(
+        model_name, ollama_provider_config=ollama_provider_config
+    )
     results: list[EvalCaseResult] = []
 
     for query in queries:
@@ -200,12 +204,15 @@ async def run_full_evaluation(
     *,
     rag_service: Any,
     settings: EvalSettings | None = None,
+    ollama_provider_config: OllamaProviderConfig,
 ) -> list[EvalCaseResult]:
     """Run RAG/no-RAG and small/large model ablations."""
     cfg = settings or EvalSettings()
     queries = TEST_QUERIES[: cfg.EVAL_MAX_TEST_QUERIES]
 
-    judge_agent = build_judge_agent(cfg.EVAL_JUDGE_MODEL)
+    judge_agent = build_judge_agent(
+        cfg.EVAL_JUDGE_MODEL, ollama_provider_config=ollama_provider_config
+    )
 
     conditions = [
         {
@@ -241,6 +248,7 @@ async def run_full_evaluation(
             rag_service=rag_service,
             judge_agent=judge_agent,
             settings=cfg,
+            ollama_provider_config=ollama_provider_config,
         )
         all_results.extend(condition_results)
 
@@ -252,8 +260,11 @@ async def main() -> None:
     from league_multi_tool_llm_agent.db.rag_service import RagService, RagSettings
 
     settings = EvalSettings()
-    # rag_service = RagService(RagSettings())
-    rag_settings = RagSettings()
+    local_llm_config = OllamaProviderConfig()
+    rag_settings = RagSettings(
+        EMBEDDING_API_BASE="http://localhost:11434", db_host="localhost"
+    )
+
     db_url = URL.create(
         drivername="postgresql+psycopg2",
         username=rag_settings.db_user,
@@ -267,6 +278,7 @@ async def main() -> None:
     results = await run_full_evaluation(
         rag_service=rag_service,
         settings=settings,
+        ollama_provider_config=local_llm_config,
     )
 
     save_eval_results(
