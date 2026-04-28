@@ -22,24 +22,6 @@ async def llm_reflect(answer: str) -> str:
 
 
 @dataclass
-class SynthesisNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
-    async def run(
-        self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
-        ctx.state.draft_answer = await llm_synthesize(ctx.state)
-        return ReflectionNode()
-
-
-@dataclass
-class ReflectionNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
-    async def run(
-        self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
-        ctx.state.final_answer = await llm_reflect(ctx.state.draft_answer or "")
-        return StorePromptCacheNode()
-
-
-@dataclass
 class StorePromptCacheNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
@@ -62,10 +44,31 @@ class StorePromptCacheNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
 
 
 @dataclass
+class ReflectionNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
+    async def run(
+        self, ctx: GraphRunContext[AssistantState, GraphDeps]
+    ) -> StorePromptCacheNode:
+        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
+        ctx.state.final_answer = await llm_reflect(ctx.state.draft_answer or "")
+        return StorePromptCacheNode()
+
+
+@dataclass
+class SynthesisNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
+    async def run(
+        self, ctx: GraphRunContext[AssistantState, GraphDeps]
+    ) -> ReflectionNode:
+        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
+        ctx.state.draft_answer = await llm_synthesize(ctx.state)
+        return ReflectionNode()
+
+
+@dataclass
 class AggregationNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
+    ) -> SynthesisNode:
+        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
         blocks: list[str] = []
 
         if ctx.state.profile_text:

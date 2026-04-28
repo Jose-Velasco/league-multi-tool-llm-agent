@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
+import traceback
 from typing import Any
 
 from pydantic_ai import Agent
@@ -23,22 +25,28 @@ from league_multi_tool_llm_agent.evaluation.utils import (
 from league_multi_tool_llm_agent.models.agent_config import OllamaProviderConfig
 from league_multi_tool_llm_agent.models.rag_configs import EmbeddingSettings
 
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+)
+
 TEST_QUERIES = [
-    "I like strong female leads and dark aesthetics, recommend a champion.",
-    "Easy beginner champions for new players.",
-    "I prefer supportive roles and teamwork, who should I main?",
-    "Aggressive junglers with high damage.",
-    "Cute skins for support champions.",
-    "Tanky champions that can engage fights.",
-    "High mobility assassins.",
-    "Champions similar to Ahri.",
-    "Dark themed skins with magical vibes.",
     "Good champions for climbing ranked solo queue.",
     "Beginner-friendly supports.",
     "Champions with strong late game scaling.",
+    "I like strong female leads and dark aesthetics, recommend a champion.",
+    "I prefer supportive roles and teamwork, who should I main?",
+    "Aggressive junglers with high damage.",
+    "Cute skins for support champions.",
+    "Champions similar to Ahri.",
+    "Skins with futuristic or sci-fi themes.",
+    "Easy beginner champions for new players.",
+    "Tanky champions that can engage fights.",
+    "High mobility assassins.",
+    "Dark themed skins with magical vibes.",
     "Fun off-meta champions.",
     "Champions that fit a strategic playstyle.",
-    "Skins with futuristic or sci-fi themes.",
 ]
 
 
@@ -155,6 +163,16 @@ async def run_single_eval_case(
                 )
         except Exception as e:
             latency = time.perf_counter() - start
+            error_type = type(e).__name__
+            error_msg = str(e)
+            tb = traceback.format_exc(limit=5)
+            logger.exception(
+                "Generation failed | condition=%s | model=%s | use_rag=%s | query=%r",
+                condition,
+                model_name,
+                use_rag,
+                query,
+            )
             return EvalCaseResult(
                 query=query,
                 condition=condition,
@@ -167,7 +185,10 @@ async def run_single_eval_case(
                 explanation_quality=None,
                 personalization=None,
                 groundedness=None,
-                judge_notes=f"Generation failed: {e}",
+                judge_notes=(
+                    f"Generation failed: {error_type}: {error_msg}\nTraceback:\n{tb}"
+                ),
+                # judge_notes=f"Generation failed: {e}",
             )
 
         latency = time.perf_counter() - start
@@ -183,6 +204,20 @@ async def run_single_eval_case(
         except Exception as e:
             score = None
             judge_error = str(e)
+            error_type = type(e).__name__
+            error_msg = str(e)
+            tb = traceback.format_exc(limit=5)
+
+            logger.exception(
+                "Judge failed | condition=%s | model=%s | use_rag=%s | query=%r",
+                condition,
+                model_name,
+                use_rag,
+                query,
+            )
+
+            score = None
+            judge_error = f"{error_type}: {error_msg}\nTraceback:\n{tb}"
 
         return EvalCaseResult(
             query=query,
@@ -265,13 +300,13 @@ async def run_full_evaluation(
     )
 
     conditions = [
-        {"condition": "large_rag", "model_name": cfg.EVAL_LARGE_MODEL, "use_rag": True},
-        {"condition": "small_rag", "model_name": cfg.EVAL_SMALL_MODEL, "use_rag": True},
         {
             "condition": "small_no_rag",
             "model_name": cfg.EVAL_SMALL_MODEL,
             "use_rag": False,
         },
+        {"condition": "small_rag", "model_name": cfg.EVAL_SMALL_MODEL, "use_rag": True},
+        {"condition": "large_rag", "model_name": cfg.EVAL_LARGE_MODEL, "use_rag": True},
         {
             "condition": "large_no_rag",
             "model_name": cfg.EVAL_LARGE_MODEL,
@@ -373,7 +408,12 @@ async def run_full_evaluation(
 
 async def main() -> None:
     """Run evaluation in a properly configured Colab/local environment."""
+    import os
+
     from league_multi_tool_llm_agent.db.rag_service import RagService, RagSettings
+
+    os.environ["OLLAMA_NUM_PARALLEL"] = "2"
+    os.environ["OLLAMA_MAX_LOADED_MODELS"] = "2"
 
     settings = EvalSettings()
     local_llm_config = OllamaProviderConfig()

@@ -21,7 +21,8 @@ class EvalSettings(BaseSettings):
     # EVAL_LARGE_MODEL: str = "qwen3:8b-q4_K_M"
     # EVAL_JUDGE_MODEL: str = "qwen3:8b-q4_K_M"
 
-    EVAL_SMALL_MODEL: str = "qwen3.5:2b"
+    # EVAL_SMALL_MODEL: str = "qwen3.5:2b"
+    EVAL_SMALL_MODEL: str = "qwen3.5:2b-q4_K_M"
     EVAL_LARGE_MODEL: str = "gemma4:e4b-it-q4_K_M"
     EVAL_JUDGE_MODEL: str = "gemma4:e4b-it-q4_K_M"
 
@@ -31,4 +32,4 @@ class EvalSettings(BaseSettings):
     # Generation
     EVAL_TEMPERATURE: float = 0.2
     EVAL_MAX_TEST_QUERIES: int = 20
-    EVAL_MAX_CONCURRENCY: int = 4
+    EVAL_MAX_CONCURRENCY: int = 3

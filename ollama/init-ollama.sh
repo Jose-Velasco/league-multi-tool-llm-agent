@@ -21,6 +21,7 @@ done
 
 # qwen3.5:2b
 # gemma4:e4b-it-q4_K_M"
+# qwen3.5:2b-q4_K_M
 
 if ! ollama list | grep -q qwen3-embedding:0.6b; then
   ollama pull qwen3-embedding:0.6b

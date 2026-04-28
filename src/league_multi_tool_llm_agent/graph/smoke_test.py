@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic_graph import Graph
 from sqlalchemy import URL
 
+from league_multi_tool_llm_agent.db.llm_utils import EmbeddingClient
 from league_multi_tool_llm_agent.db.rag_service import RagService
 from league_multi_tool_llm_agent.graph.agents import build_parser_agent
 from league_multi_tool_llm_agent.graph.capability_nodes import (
@@ -15,6 +16,7 @@ from league_multi_tool_llm_agent.graph.capability_nodes import (
     PromptCacheCheckNode,
     RecommendationNode,
     ReturnCachedResponseNode,
+    SkinSearchNode,
 )
 from league_multi_tool_llm_agent.graph.catch_all_node import build_fallback_agent
 from league_multi_tool_llm_agent.graph.prompt_cache import InMemoryDictCache
@@ -32,7 +34,6 @@ from league_multi_tool_llm_agent.models.graph_models import (
     AssistantState,
     FinalAnswer,
     GraphDeps,
-    UserQuery,
 )
 from league_multi_tool_llm_agent.models.rag_configs import RagSettings
 
@@ -48,6 +49,7 @@ async def main() -> None:
             MatchHistoryAnalysisNode,
             ChampionMetaNode,
             RecommendationNode,
+            SkinSearchNode,
             MatchGuideNode,
             AggregationNode,
             SynthesisNode,
@@ -80,7 +82,10 @@ async def main() -> None:
         port=rag_settings.db_port,
         database=rag_settings.db_name,
     )
-    rag_service = RagService(db_url=db_url, settings=rag_settings)
+    rag_query_embedder = EmbeddingClient()
+    rag_service = RagService(
+        db_url=db_url, settings=rag_settings, embedder=rag_query_embedder
+    )
 
     deps = GraphDeps(
         opgg_client=OPGGMCPClient(config=OPGGMCPConfig()),
@@ -90,6 +95,10 @@ async def main() -> None:
         controller=None,
         rag_service=rag_service,
         llm_service=None,
+    )
+
+    print(
+        league_assistant_graph.mermaid_code(start_node=BuildInitialAssistantStateNode)
     )
 
     # state0 = AssistantState()
@@ -178,24 +187,24 @@ async def main() -> None:
     # print()
     # print(f"{result_final_answer3.raw_context_blocks =}")
 
-    state4 = AssistantState()
+    # state4 = AssistantState()
 
-    result4 = await league_assistant_graph.run(
-        start_node=BuildInitialAssistantStateNode(
-            user_input=UserQuery(
-                query="I like strong female leads and dark aesthetics",
-            )
-        ),
-        state=state4,
-        deps=deps,
-    )
-    print("\n#### Result4: ####\n")
-    result_final_answer4 = result4.output
-    print(f"{result_final_answer4.answer =}")
-    print(f"{result_final_answer4.used_cache =}")
-    print(f"{result_final_answer4.intent =}")
-    print()
-    print(f"{result_final_answer4.raw_context_blocks =}")
+    # result4 = await league_assistant_graph.run(
+    #     start_node=BuildInitialAssistantStateNode(
+    #         user_input=UserQuery(
+    #             query="I like strong female leads and dark aesthetics",
+    #         )
+    #     ),
+    #     state=state4,
+    #     deps=deps,
+    # )
+    # print("\n#### Result4: ####\n")
+    # result_final_answer4 = result4.output
+    # print(f"{result_final_answer4.answer =}")
+    # print(f"{result_final_answer4.used_cache =}")
+    # print(f"{result_final_answer4.intent =}")
+    # print()
+    # print(f"{result_final_answer4.raw_context_blocks =}")
 
 
 if __name__ == "__main__":

@@ -25,7 +25,8 @@ class BuildInitialAssistantStateNode(BaseNode[AssistantState, GraphDeps, FinalAn
 
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
+    ) -> PromptCacheCheckNode:
+        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
         ctx.state.original_query = self.user_input.query
         ctx.state.parsed_query = self.user_input
         ctx.state.cache_key = self.user_input.query.strip().lower()
@@ -36,7 +37,8 @@ class BuildInitialAssistantStateNode(BaseNode[AssistantState, GraphDeps, FinalAn
 class PromptCacheCheckNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
+    ) -> ParseAndRouteNode | ReturnCachedResponseNode:
+        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
         # cached = await cache_lookup(ctx.deps.prompt_cache, ctx.state.cache_key or "")
         cached = (
             ctx.deps.prompt_cache.get(ctx.state.cache_key or "")
@@ -58,7 +60,15 @@ class PromptCacheCheckNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
 class ParseAndRouteNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
+    ) -> (
+        ProfileAnalysisNode
+        | MatchHistoryAnalysisNode
+        | ChampionMetaNode
+        | MatchGuideNode
+        | SkinSearchNode
+        | RecommendationNode
+    ):
+        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
         assert ctx.state.parsed_query is not None
 
         parsed_intent = await parse_intent_with_fallback(
@@ -129,7 +139,8 @@ class ReturnCachedResponseNode(BaseNode[AssistantState, GraphDeps, FinalAnswer])
 class ProfileAnalysisNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
+    ) -> AggregationNode | ErrorRecoveryNode:
+        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
         q = ctx.state.parsed_query
         assert q is not None
 
@@ -178,7 +189,9 @@ class ProfileAnalysisNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
 class MatchHistoryAnalysisNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
+    ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
+        # ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
+        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
         q = ctx.state.parsed_query
         assert q is not None
 
@@ -203,7 +216,9 @@ class MatchHistoryAnalysisNode(BaseNode[AssistantState, GraphDeps, FinalAnswer])
 class ChampionMetaNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
+    ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
+        # ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
+        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
         q = ctx.state.parsed_query
         assert q is not None
 
@@ -227,7 +242,9 @@ class ChampionMetaNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
 
 @dataclass
 class RecommendationNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
-    async def run(self, ctx: GraphRunContext[AssistantState, GraphDeps]):
+    async def run(
+        self, ctx: GraphRunContext[AssistantState, GraphDeps]
+    ) -> AggregationNode | ErrorRecoveryNode:
         if ctx.deps.rag_service is None or ctx.state.parsed_intent is None:
             return ErrorRecoveryNode()
 
@@ -249,7 +266,7 @@ class RecommendationNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
 class SkinSearchNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
+    ) -> AggregationNode | ErrorRecoveryNode:
         if ctx.deps.rag_service is None or ctx.state.parsed_intent is None:
             return ErrorRecoveryNode()
 
@@ -322,7 +339,8 @@ class SkinSearchNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
 class MatchGuideNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
+    ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
+        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
         q = ctx.state.parsed_query
         assert q is not None
 
