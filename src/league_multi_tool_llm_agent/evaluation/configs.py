@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+RecommendationBackend = Literal["litellm", "pydanticai"]
 
 
 class EvalSettings(BaseSettings):
@@ -32,4 +36,5 @@ class EvalSettings(BaseSettings):
     # Generation
     EVAL_TEMPERATURE: float = 0.2
     EVAL_MAX_TEST_QUERIES: int = 20
-    EVAL_MAX_CONCURRENCY: int = 3
+    EVAL_MAX_CONCURRENCY: int = 4
+    EVAL_RECOMMENDATION_BACKEND: RecommendationBackend = "litellm"

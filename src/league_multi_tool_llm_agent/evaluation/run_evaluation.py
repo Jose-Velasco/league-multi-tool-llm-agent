@@ -15,15 +15,16 @@ from league_multi_tool_llm_agent.evaluation.agents import (
     EvalCaseResult,
     JudgeScore,
     build_judge_agent,
-    build_recommendation_agent,
 )
 from league_multi_tool_llm_agent.evaluation.configs import EvalSettings
 from league_multi_tool_llm_agent.evaluation.utils import (
+    build_recommendation_client,
     checkpoint_results,
     save_eval_results,
 )
 from league_multi_tool_llm_agent.models.agent_config import OllamaProviderConfig
 from league_multi_tool_llm_agent.models.rag_configs import EmbeddingSettings
+from league_multi_tool_llm_agent.protocols.agent import RecommendationClient
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -53,30 +54,49 @@ TEST_QUERIES = [
 async def generate_no_rag_answer(
     *,
     query: str,
-    agent: Agent[None, str],
+    client: RecommendationClient,
 ) -> tuple[str, str]:
     """Generate a recommendation without retrieval context."""
-    prompt = f"""
-    User request:
+    prompt = f"""User request:
     {query}
 
     Recommend 2-3 League of Legends champions or skins that fit the request.
     Explain why each recommendation fits.
+    Keep the answer concise, under 150 words.
     Return plain text only.
     """
 
-    result = await agent.run(prompt)
-    return result.output, ""
+    answer = await client.generate(prompt)
+    return answer, ""
+
+
+# async def generate_no_rag_answer(
+#     *,
+#     query: str,
+#     agent: Agent[None, str],
+# ) -> tuple[str, str]:
+#     """Generate a recommendation without retrieval context."""
+#     prompt = f"""
+#     User request:
+#     {query}
+
+#     Recommend 2-3 League of Legends champions or skins that fit the request.
+#     Explain why each recommendation fits.
+#     Return plain text only.
+#     """
+
+#     result = await agent.run(prompt)
+#     return result.output, ""
 
 
 async def generate_rag_answer(
     *,
     query: str,
-    agent: Agent[None, str],
-    rag_service: Any,
+    client: RecommendationClient,
+    rag_service,
     top_k: int,
 ) -> tuple[str, str]:
-    """Retrieve context and generate a RAG-grounded recommendation."""
+    """Retrieve context and generate a grounded recommendation."""
     doc_type = "champion_skin" if "skin" in query.lower() else "champion_profile"
 
     retrieved_docs = await rag_service.search(
@@ -89,8 +109,7 @@ async def generate_rag_answer(
         f"[{i + 1}] {doc.content}" for i, doc in enumerate(retrieved_docs)
     )
 
-    prompt = f"""
-    User request:
+    prompt = f"""User request:
     {query}
 
     Retrieved context:
@@ -102,8 +121,45 @@ async def generate_rag_answer(
     Return plain text only.
     """
 
-    result = await agent.run(prompt)
-    return result.output, retrieved_context
+    answer = await client.generate(prompt)
+    return answer, retrieved_context
+
+
+# async def generate_rag_answer(
+#     *,
+#     query: str,
+#     agent: Agent[None, str],
+#     rag_service: Any,
+#     top_k: int,
+# ) -> tuple[str, str]:
+#     """Retrieve context and generate a RAG-grounded recommendation."""
+#     doc_type = "champion_skin" if "skin" in query.lower() else "champion_profile"
+
+#     retrieved_docs = await rag_service.search(
+#         query=query,
+#         doc_type=doc_type,
+#         limit=top_k,
+#     )
+
+#     retrieved_context = "\n\n".join(
+#         f"[{i + 1}] {doc.content}" for i, doc in enumerate(retrieved_docs)
+#     )
+
+#     prompt = f"""
+#     User request:
+#     {query}
+
+#     Retrieved context:
+#     {retrieved_context}
+
+#     Recommend 2-3 League of Legends champions or skins that fit the request.
+#     Use the retrieved context when possible.
+#     Explain why each recommendation fits.
+#     Return plain text only.
+#     """
+
+#     result = await agent.run(prompt)
+#     return result.output, retrieved_context
 
 
 async def judge_answer(
@@ -138,7 +194,8 @@ async def run_single_eval_case(
     model_name: str,
     use_rag: bool,
     rag_service: Any | None,
-    rec_agent: Agent[None, str],
+    # rec_agent: Agent[None, str],
+    rec_agent: RecommendationClient,
     judge_agent: Agent[None, JudgeScore],
     settings: EvalSettings,
     semaphore: asyncio.Semaphore,
@@ -154,14 +211,14 @@ async def run_single_eval_case(
 
                 answer, context = await generate_rag_answer(
                     query=query,
-                    agent=rec_agent,
+                    client=rec_agent,
                     rag_service=rag_service,
                     top_k=settings.EVAL_RAG_TOP_K,
                 )
             else:
                 answer, context = await generate_no_rag_answer(
                     query=query,
-                    agent=rec_agent,
+                    client=rec_agent,
                 )
         except Exception as e:
             latency = time.perf_counter() - start
@@ -249,9 +306,15 @@ async def run_eval_condition(
     ollama_provider_config: OllamaProviderConfig,
 ) -> list[EvalCaseResult]:
     """Run one ablation condition across all test queries."""
-    rec_agent = build_recommendation_agent(
-        model_name,
+    # rec_agent = build_recommendation_agent(
+    #     model_name,
+    #     ollama_provider_config=ollama_provider_config,
+    # )
+
+    rec_client = build_recommendation_client(
+        model_name=model_name,
         ollama_provider_config=ollama_provider_config,
+        settings=settings,
     )
 
     semaphore = asyncio.Semaphore(settings.EVAL_MAX_CONCURRENCY)
@@ -263,7 +326,7 @@ async def run_eval_condition(
             model_name=model_name,
             use_rag=use_rag,
             rag_service=rag_service,
-            rec_agent=rec_agent,
+            rec_agent=rec_client,
             judge_agent=judge_agent,
             settings=settings,
             semaphore=semaphore,

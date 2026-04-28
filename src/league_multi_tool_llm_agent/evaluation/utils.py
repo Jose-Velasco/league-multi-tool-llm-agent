@@ -3,8 +3,17 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+from pydantic_ai import Agent
 
 from league_multi_tool_llm_agent.evaluation.agents import EvalCaseResult
+from league_multi_tool_llm_agent.evaluation.configs import EvalSettings
+from league_multi_tool_llm_agent.graph.utils import build_ollama_agent_model
+from league_multi_tool_llm_agent.models.agent_config import OllamaProviderConfig
+from league_multi_tool_llm_agent.protocols.agent import (
+    LiteLLMRecommendationClient,
+    PydanticAIRecommendationClient,
+    RecommendationClient,
+)
 
 
 def save_eval_results(
@@ -91,4 +100,44 @@ def checkpoint_results(
     save_eval_results(
         results=results,
         output_dir=str(checkpoint_dir),
+    )
+
+
+def build_recommendation_client(
+    *,
+    model_name: str,
+    ollama_provider_config: OllamaProviderConfig,
+    settings: EvalSettings,
+) -> RecommendationClient:
+    """Build a recommendation client using the selected backend."""
+
+    if settings.EVAL_RECOMMENDATION_BACKEND == "litellm":
+        return LiteLLMRecommendationClient(
+            model_name=model_name,
+            ollama_provider_config=ollama_provider_config,
+            temperature=settings.EVAL_TEMPERATURE,
+        )
+
+    if settings.EVAL_RECOMMENDATION_BACKEND == "pydanticai":
+        model = build_ollama_agent_model(
+            model_name=model_name,
+            ollama_provider_config=ollama_provider_config,
+        )
+
+        agent = Agent(
+            model=model,
+            output_type=str,
+            instructions=(
+                "You are a League of Legends recommendation assistant. "
+                "Recommend champions or skins based on the user's preferences. "
+                "Give concise but useful reasoning. "
+                "When context is provided, ground your answer in that context. "
+                "Return plain text only."
+            ),
+        )
+
+        return PydanticAIRecommendationClient(agent=agent)
+
+    raise ValueError(
+        f"Unsupported recommendation backend: {settings.EVAL_RECOMMENDATION_BACKEND}"
     )
