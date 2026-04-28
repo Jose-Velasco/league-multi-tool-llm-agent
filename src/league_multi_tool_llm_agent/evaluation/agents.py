@@ -92,8 +92,11 @@ def build_judge_agent(
     return Agent(
         model=model,
         output_type=JudgeScore,
+        retries=3,
         instructions=(
             "You are evaluating a League of Legends recommendation system.\n"
+            "Return ONLY valid JSON.\n"
+            "Do not include markdown, explanations, or text outside the JSON.\n"
             "Score each response from 1 to 5 using these criteria:\n"
             "- relevance: matches the user's request\n"
             "- explanation_quality: reasoning is clear and useful\n"

@@ -4,6 +4,7 @@ import asyncio
 import logging
 import time
 import traceback
+from pathlib import Path
 from typing import Any
 
 from pydantic_ai import Agent
@@ -26,11 +27,26 @@ from league_multi_tool_llm_agent.models.agent_config import OllamaProviderConfig
 from league_multi_tool_llm_agent.models.rag_configs import EmbeddingSettings
 from league_multi_tool_llm_agent.protocols.agent import RecommendationClient
 
-logger = logging.getLogger(__name__)
+LOG_DIR = Path("data/eval_results/logs")
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+LOG_FILE = LOG_DIR / "evaluation.log"
+
+# logger = logging.getLogger(__name__)
+# logging.basicConfig(
+#     level=logging.INFO,
+#     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+# )
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_FILE, mode="w", encoding="utf-8"),
+        logging.StreamHandler(),
+    ],
 )
+
+logger = logging.getLogger(__name__)
 
 TEST_QUERIES = [
     "Good champions for climbing ranked solo queue.",
@@ -225,6 +241,7 @@ async def run_single_eval_case(
             error_type = type(e).__name__
             error_msg = str(e)
             tb = traceback.format_exc(limit=5)
+
             logger.exception(
                 "Generation failed | condition=%s | model=%s | use_rag=%s | query=%r",
                 condition,
@@ -232,6 +249,7 @@ async def run_single_eval_case(
                 use_rag,
                 query,
             )
+
             return EvalCaseResult(
                 query=query,
                 condition=condition,
@@ -268,11 +286,13 @@ async def run_single_eval_case(
             tb = traceback.format_exc(limit=5)
 
             logger.exception(
-                "Judge failed | condition=%s | model=%s | use_rag=%s | query=%r",
+                "Judge failed | condition=%s | model=%s | use_rag=%s | query=%r | answer=%r | context_preview=%r",
                 condition,
                 model_name,
                 use_rag,
                 query,
+                answer[:1000] if answer else "",
+                context[:1000] if context else "",
             )
 
             score = None
