@@ -78,12 +78,13 @@ async def generate_no_rag_answer(
 
     Recommend 2-3 League of Legends champions or skins that fit the request.
     Explain why each recommendation fits.
-    Keep the answer concise, under 150 words.
+    # Keep the answer concise.
     Return plain text only.
     """
 
     answer = await client.generate(prompt)
-    return answer, ""
+
+    return answer, "No Rag Context retrieved."
 
 
 # async def generate_no_rag_answer(
@@ -197,7 +198,7 @@ async def judge_answer(
     {answer}
 
     Evaluate the system response.
-    """.strip()
+    """
 
     result = await judge_agent.run(prompt)
     return result.output
@@ -269,6 +270,15 @@ async def run_single_eval_case(
             )
 
         latency = time.perf_counter() - start
+        logger.info(
+            "recommend agent answer | condition=%s | model=%s | use_rag=%s | query=%r | answer=%r | context_preview=%r",
+            condition,
+            model_name,
+            use_rag,
+            query,
+            answer[:1000] if answer else "",
+            context[:1000] if context else "",
+        )
 
         try:
             score = await judge_answer(

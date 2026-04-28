@@ -37,47 +37,47 @@ class EvalCaseResult:
     judge_notes: str = ""
 
 
-def build_recommendation_litellm_agent(
-    model_name: str, ollama_provider_config: OllamaProviderConfig
-) -> Agent[None, str]:
-    """Build an LLM agent used to generate recommendations with LiteLLM."""
-    model = build_ollama_agent_model(
-        model_name=model_name,
-        ollama_provider_config=ollama_provider_config,
-    )
-    # Use LiteLLM instead of PydanticAI Agent
-    return Agent(
-        model=model,
-        output_type=str,  # Output is plain text, no shape constraints
-        instructions=(
-            "You are a League of Legends recommendation assistant. "
-            "Recommend champions or skins based on the user's preferences. "
-            "Give concise but useful reasoning. "
-            "When context is provided, ground your answer in that context."
-        ),
-    )
+# def build_recommendation_litellm_agent(
+#     model_name: str, ollama_provider_config: OllamaProviderConfig
+# ) -> Agent[None, str]:
+#     """Build an LLM agent used to generate recommendations with LiteLLM."""
+#     model = build_ollama_agent_model(
+#         model_name=model_name,
+#         ollama_provider_config=ollama_provider_config,
+#     )
+#     # Use LiteLLM instead of PydanticAI Agent
+#     return Agent(
+#         model=model,
+#         output_type=str,  # Output is plain text, no shape constraints
+#         instructions=(
+#             "You are a League of Legends recommendation assistant. "
+#             "Recommend champions or skins based on the user's preferences. "
+#             "Give concise but useful reasoning. "
+#             "When context is provided, ground your answer in that context."
+#         ),
+#     )
 
 
 # Agent Builders
-def build_recommendation_agent(
-    model_name: str, ollama_provider_config: OllamaProviderConfig
-) -> Agent[None, str]:
-    """Build an LLM agent used to generate recommendations."""
-    model = build_ollama_agent_model(
-        model_name=model_name, ollama_provider_config=ollama_provider_config
-    )
-    # model = OllamaModel(model_name=model_name)
+# def build_recommendation_agent(
+#     model_name: str, ollama_provider_config: OllamaProviderConfig
+# ) -> Agent[None, str]:
+#     """Build an LLM agent used to generate recommendations."""
+#     model = build_ollama_agent_model(
+#         model_name=model_name, ollama_provider_config=ollama_provider_config
+#     )
+#     # model = OllamaModel(model_name=model_name)
 
-    return Agent(
-        model=model,
-        output_type=str,
-        instructions=(
-            "You are a League of Legends recommendation assistant. "
-            "Recommend champions or skins based on the user's preferences. "
-            "Give concise but useful reasoning. "
-            "When context is provided, ground your answer in that context."
-        ),
-    )
+#     return Agent(
+#         model=model,
+#         output_type=str,
+#         instructions=(
+#             "You are a League of Legends recommendation assistant. "
+#             "Recommend champions or skins based on the user's preferences. "
+#             "Give concise but useful reasoning. "
+#             "When context is provided, ground your answer in that context."
+#         ),
+#     )
 
 
 def build_judge_agent(
