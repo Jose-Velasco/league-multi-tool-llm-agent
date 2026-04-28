@@ -62,7 +62,8 @@ async def generate_no_rag_answer(
 
     Recommend 2-3 League of Legends champions or skins that fit the request.
     Explain why each recommendation fits.
-    """.strip()
+    Return plain text only.
+    """
 
     result = await agent.run(prompt)
     return result.output, ""
@@ -98,7 +99,8 @@ async def generate_rag_answer(
     Recommend 2-3 League of Legends champions or skins that fit the request.
     Use the retrieved context when possible.
     Explain why each recommendation fits.
-    """.strip()
+    Return plain text only.
+    """
 
     result = await agent.run(prompt)
     return result.output, retrieved_context

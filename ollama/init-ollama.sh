@@ -35,9 +35,9 @@ if ! ollama list | grep -q gemma4:e2b-it-q4_K_M; then
   ollama pull gemma4:e2b-it-q4_K_M
 fi
 
-if ! ollama list | grep -q gemma3:4b-it-qat; then
-  ollama pull gemma3:4b-it-qat
-fi
+# if ! ollama list | grep -q gemma3:4b-it-qat; then
+#   ollama pull gemma3:4b-it-qat
+# fi
 
 # keep server in foreground (wait for background ollama)
 wait
