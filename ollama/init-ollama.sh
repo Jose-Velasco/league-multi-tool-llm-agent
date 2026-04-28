@@ -19,6 +19,9 @@ done
 # ollama pull gemma4:e4b
 # qwen3-vl:2b
 
+# qwen3.5:2b
+# gemma4:e4b-it-q4_K_M"
+
 if ! ollama list | grep -q qwen3-embedding:0.6b; then
   ollama pull qwen3-embedding:0.6b
 fi
