@@ -23,17 +23,19 @@ done
 # gemma4:e4b-it-q4_K_M"
 # qwen3.5:2b-q4_K_M
 
+# qwen3.5:9b-q4_K_M
+
 if ! ollama list | grep -q qwen3-embedding:0.6b; then
   ollama pull qwen3-embedding:0.6b
 fi
 
-# if ! ollama list | grep -q gemma4:e4b-it-q4_K_M; then
-#   ollama pull gemma4:e4b-it-q4_K_M
-# fi
-
-if ! ollama list | grep -q gemma4:e2b-it-q4_K_M; then
-  ollama pull gemma4:e2b-it-q4_K_M
+if ! ollama list | grep -q gemma4:e4b-it-q4_K_M; then
+  ollama pull gemma4:e4b-it-q4_K_M
 fi
+
+# if ! ollama list | grep -q gemma4:e2b-it-q4_K_M; then
+#   ollama pull gemma4:e2b-it-q4_K_M
+# fi
 
 # if ! ollama list | grep -q gemma3:4b-it-qat; then
 #   ollama pull gemma3:4b-it-qat

@@ -28,7 +28,7 @@ class EvalSettings(BaseSettings):
     # EVAL_SMALL_MODEL: str = "qwen3.5:2b"
     EVAL_SMALL_MODEL: str = "qwen3.5:2b-q4_K_M"
     EVAL_LARGE_MODEL: str = "gemma4:e4b-it-q4_K_M"
-    EVAL_JUDGE_MODEL: str = "gemma4:e4b-it-q4_K_M"
+    EVAL_JUDGE_MODEL: str = "qwen3.5:9b-q4_K_M"
 
     # Retrieval
     EVAL_RAG_TOP_K: int = 5
