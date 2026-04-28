@@ -78,13 +78,13 @@ async def generate_no_rag_answer(
 
     Recommend 2-3 League of Legends champions or skins that fit the request.
     Explain why each recommendation fits.
-    # Keep the answer concise.
+    Keep the answer concise.
     Return plain text only.
     """
 
     answer = await client.generate(prompt)
 
-    return answer, "No Rag Context retrieved."
+    return answer, ""
 
 
 # async def generate_no_rag_answer(

@@ -1,20 +1,22 @@
 import asyncio
 
-from league_multi_tool_llm_agent.evaluation.agents import build_recommendation_agent
 from league_multi_tool_llm_agent.evaluation.run_evaluation import generate_no_rag_answer
 from league_multi_tool_llm_agent.models.agent_config import OllamaProviderConfig
+from league_multi_tool_llm_agent.protocols.agent import (
+    LiteLLMRecommendationClient,
+)
 
 
 async def test():
     model_name = "qwen3.5:2b-q4_K_M"
     local_llm_config = OllamaProviderConfig(OLLAMA_BASE_URL="http://ollama:11434/v1")
-    rec_agent = build_recommendation_agent(
-        model_name=model_name,
-        ollama_provider_config=local_llm_config,
+
+    client = LiteLLMRecommendationClient(
+        model_name=model_name, ollama_provider_config=local_llm_config
     )
 
     result = await generate_no_rag_answer(
-        query="Champions that fit a strategic playstyle", agent=rec_agent
+        query="Champions that fit a strategic playstyle", client=client
     )
     # r = await acompletion(
     #     model="ollama_chat/qwen3.5:2b-q4_K_M",
