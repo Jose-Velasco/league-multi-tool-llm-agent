@@ -5,11 +5,13 @@ export OLLAMA_NUM_PARALLEL=1
 export OLLAMA_MAX_LOADED_MODELS=1
 export OLLAMA_HOST=127.0.0.1:11434
 
-apt-get update -qq
+sudo apt-get update -qq
 
-apt-get install lshw
+sudo apt-get install lshw
 
-apt-get install zstd
+sudo apt-get install zstd
+
+sudo apt install -y pciutils
 
 curl -fsSL https://ollama.com/install.sh | sh
 
