@@ -1,9 +1,9 @@
-import re
 from dataclasses import dataclass
 
 from pydantic_graph import BaseNode, End, GraphRunContext
 
 from league_multi_tool_llm_agent.graph.prompt_cache import PromptCache
+from league_multi_tool_llm_agent.graph.utils import normalize_cache_key
 from league_multi_tool_llm_agent.models.graph_models import (
     AssistantState,
     FinalAnswer,
@@ -20,17 +20,50 @@ def handle_prompt_cache(
     cache_key: str,
     reflection_node_metadata: ReflectionResult | None,
     revision_answer_node_metadata: RevisedAnswer | None,
-) -> None:
-    cache_key_normalized = cache_key.lower()
-    cache_key_normalized = re.sub(r"[^\w\s]", "", cache_key_normalized)
+) -> bool:
+    """Store only approved/high-quality responses in the prompt cache."""
+    cache_key_normalized = normalize_cache_key(cache_key)
+
+    if not final_response.strip():
+        return False
+
+    should_cache = False
+
     if reflection_node_metadata and reflection_node_metadata.approved:
-        prompt_cache.insert(cache_key_normalized, final_response)
-    elif reflection_node_metadata and reflection_node_metadata.needs_revision:
-        if (
-            revision_answer_node_metadata
-            and revision_answer_node_metadata.addressed_issues
-        ):
-            prompt_cache.insert(cache_key_normalized, final_response)
+        should_cache = True
+
+    elif (
+        reflection_node_metadata
+        and reflection_node_metadata.needs_revision
+        and revision_answer_node_metadata
+        and revision_answer_node_metadata.addressed_issues
+    ):
+        should_cache = True
+
+    if not should_cache:
+        return False
+
+    prompt_cache.insert(cache_key_normalized, final_response)
+    return True
+
+
+# def handle_prompt_cache(
+#     prompt_cache: PromptCache,
+#     final_response: str,
+#     cache_key: str,
+#     reflection_node_metadata: ReflectionResult | None,
+#     revision_answer_node_metadata: RevisedAnswer | None,
+# ) -> None:
+#     cache_key_normalized = cache_key.lower()
+#     cache_key_normalized = re.sub(r"[^\w\s]", "", cache_key_normalized)
+#     if reflection_node_metadata and reflection_node_metadata.approved:
+#         prompt_cache.insert(cache_key_normalized, final_response)
+#     elif reflection_node_metadata and reflection_node_metadata.needs_revision:
+#         if (
+#             revision_answer_node_metadata
+#             and revision_answer_node_metadata.addressed_issues
+#         ):
+#             prompt_cache.insert(cache_key_normalized, final_response)
 
 
 @dataclass
@@ -70,7 +103,7 @@ class RevisionNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
     ) -> StorePromptCacheNode:
-        print("### Starting RevisionNode ###")
+        # print("### Starting RevisionNode ###")
 
         # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
         # ctx.state.final_answer = await llm_reflect(ctx.state.draft_answer or "")
@@ -109,7 +142,7 @@ class RevisionNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
             # ctx.state.revision_answer_node_metadata = result.output
             # ctx.state.final_answer = result.output.revised_answer
         except Exception:
-            print("Revision failed.")
+            # print("Revision failed.")
 
             fall_back_answer = "I ran into an issue while revising my response for that request. Try rephrasing it or asking for a champion recommendation, skin search, or playstyle suggestion."
             if ctx.state.synthesis_node_metadata:
@@ -136,7 +169,7 @@ class ReflectionNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
     ) -> StorePromptCacheNode | RevisionNode:
-        print("### Starting ReflectionNode ###")
+        # print("### Starting ReflectionNode ###")
 
         joined = "\n\n".join(ctx.state.merged_context_blocks)
         prompt = f"""
@@ -170,7 +203,7 @@ class SynthesisNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
     ) -> ReflectionNode:
-        print("### Starting SynthesisNode ###")
+        # print("### Starting SynthesisNode ###")
         joined = "\n\n".join(ctx.state.merged_context_blocks)
         prompt = f""" original_query:
         {ctx.state.original_query}

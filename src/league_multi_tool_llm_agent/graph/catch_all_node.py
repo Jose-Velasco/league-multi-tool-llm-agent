@@ -248,7 +248,7 @@ async def fallback_mcp_agent(
     allowed_tool_names: list[str] | None = None,
 ) -> str:
     """Select and execute one OP.GG MCP tool using an LLM fallback agent."""
-    print("### Starting OPGG MCP agent ###")
+    # print("### Starting OPGG MCP agent ###")
 
     if not tool_registry:
         tool_registry = await mcp_client.refresh_tool_registry()
@@ -302,8 +302,6 @@ async def fallback_mcp_agent(
         else:
             selection = (await fallback_agent.run(prompt)).output
 
-        print(selection)
-
         # selection = (await fallback_agent.run(prompt)).output
 
         _validate_selection_against_registry(selection, candidate_registry)
@@ -312,8 +310,6 @@ async def fallback_mcp_agent(
             selection.tool_name,
             selection.arguments,
         )
-        print("#####")
-        print(result)
 
         text = mcp_client.extract_text(result)
         if not text:
@@ -322,8 +318,6 @@ async def fallback_mcp_agent(
                 f"arguments={selection.arguments}"
             )
 
-        print("#####")
-        print(text)
         return text
 
     except Exception as e:

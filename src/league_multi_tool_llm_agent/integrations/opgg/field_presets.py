@@ -93,6 +93,9 @@ class FieldPresets:
     CHAMPION_COUNTERS_ONLY = [
         "champion",
         "position",
+        "data.strong_counters",
+        "data.weak_counters",
+        "data.summary.average_stats",
         "data.summary.average_stats.{tier,rank,win_rate,pick_rate,ban_rate}",
         "data.strong_counters[].{champion_name,play,win_rate}",
         "data.weak_counters[].{champion_name,play,win_rate}",

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from pydantic_ai.models.ollama import OllamaModel
 from pydantic_ai.providers.ollama import OllamaProvider
 
@@ -284,14 +286,19 @@ def build_ollama_agent_model(
     return model
 
 
-import re
-
-
 def normalize_text(text: str) -> str:
     """Normalize text for champion matching."""
     text = text.lower()
     text = re.sub(r"[^a-z0-9\s]", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def normalize_cache_key(text: str) -> str:
+    """Normalize cache keys consistently for lookup and storage."""
+    text = text.lower().strip()
+    text = re.sub(r"[^\w\s]", " ", text)
+    text = re.sub(r"\s+", " ", text)
     return text
 
 

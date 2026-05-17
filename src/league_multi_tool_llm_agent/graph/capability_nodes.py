@@ -9,7 +9,10 @@ from league_multi_tool_llm_agent.graph.prompting_techniques import AggregationNo
 from league_multi_tool_llm_agent.graph.system_nodes import (
     ErrorRecoveryNode,
 )
-from league_multi_tool_llm_agent.graph.utils import parse_intent_with_fallback
+from league_multi_tool_llm_agent.graph.utils import (
+    normalize_cache_key,
+    parse_intent_with_fallback,
+)
 from league_multi_tool_llm_agent.models.graph_models import (
     AssistantState,
     FinalAnswer,
@@ -38,19 +41,19 @@ class PromptCacheCheckNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
     ) -> ParseAndRouteNode | ReturnCachedResponseNode:
-        cached = (
-            ctx.deps.prompt_cache.get(ctx.state.cache_key or "")
-            if ctx.deps.prompt_cache
-            else None
-        )
 
-        if cached is not None:
-            ctx.state.cache_hit = True
-            ctx.state.cached_response = cached
-            ctx.state.parsed_intent = ParsedIntent(
-                intent=IntentType("cached_response"), query_for_rag="cached_response"
-            )
-            return ReturnCachedResponseNode()
+        if ctx.deps.prompt_cache:
+            cache_key = normalize_cache_key(ctx.state.cache_key or "")
+            cache_response = ctx.deps.prompt_cache.get(cache_key)
+            if cache_response is not None:
+                ctx.state.cache_hit = True
+                ctx.state.cached_response = cache_response
+                ctx.state.parsed_intent = ParsedIntent(
+                    intent=IntentType("cached_response"),
+                    query_for_rag="cached_response",
+                )
+                return ReturnCachedResponseNode()
+
         return ParseAndRouteNode()
 
 
@@ -102,7 +105,7 @@ class ParseAndRouteNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
         if parsed_intent.intent == IntentType.CHAMPION_RECOMMENDATION:
             return OPGG_MPC_Node()
 
-        print("### ParseAndRouteNode falling back to OPGG_MPC_Node ###")
+        # print("### ParseAndRouteNode falling back to OPGG_MPC_Node ###")
 
         return OPGG_MPC_Node()
 
@@ -253,7 +256,7 @@ class RecommendationNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
     ) -> AggregationNode | ErrorRecoveryNode:
-        print("### Starting RecommendationNode ###")
+        # print("### Starting RecommendationNode ###")
 
         if ctx.deps.rag_service is None or ctx.state.parsed_intent is None:
             return ErrorRecoveryNode()
@@ -277,7 +280,7 @@ class SkinSearchNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
     ) -> AggregationNode | ErrorRecoveryNode:
-        print("### Starting SkinSearchNode ###")
+        # print("### Starting SkinSearchNode ###")
 
         if ctx.deps.rag_service is None or ctx.state.parsed_intent is None:
             return ErrorRecoveryNode()
@@ -305,7 +308,7 @@ class OPGG_MPC_Node(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
     ) -> AggregationNode | RecommendationNode:
-        print("### Starting OPGG_MPC_Node ###")
+        # print("### Starting OPGG_MPC_Node ###")
 
         try:
             opgg_mpc_text = await fallback_mcp_agent(
@@ -318,8 +321,8 @@ class OPGG_MPC_Node(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
             )
             ctx.state.used_fallback_tool_selection = True
             ctx.state.opgg_mpc_text = opgg_mpc_text
-        except Exception as e:
-            print(e)
+        except Exception:
+            # print(e)
             return RecommendationNode()
 
         return AggregationNode()
