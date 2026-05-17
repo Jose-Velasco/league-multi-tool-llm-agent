@@ -5,11 +5,15 @@ from dataclasses import dataclass
 from pydantic_graph import BaseNode, End, GraphRunContext
 
 from league_multi_tool_llm_agent.graph.catch_all_node import fallback_mcp_agent
-from league_multi_tool_llm_agent.graph.prompting_techniques import AggregationNode
+from league_multi_tool_llm_agent.graph.prompting_techniques import (
+    AggregationNode,
+    StorePromptCacheNode,
+)
 from league_multi_tool_llm_agent.graph.system_nodes import (
     ErrorRecoveryNode,
 )
 from league_multi_tool_llm_agent.graph.utils import (
+    is_prompt_injection_or_out_of_scope,
     normalize_cache_key,
     parse_intent_with_fallback,
 )
@@ -70,17 +74,30 @@ class PromptCacheCheckNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
 #         | RecommendationNode
 #         | OPGG_MPC_Node
 #     ):
+
+
 @dataclass
 class ParseAndRouteNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> SkinSearchNode | RecommendationNode | OPGG_MPC_Node:
+    ) -> SkinSearchNode | RecommendationNode | OPGG_MPC_Node | StorePromptCacheNode:
         assert ctx.state.parsed_query is not None
 
         parsed_intent = await parse_intent_with_fallback(
             user_prompt=ctx.state.parsed_query.query,
             parser_agent=ctx.deps.parser_agent,
         )
+
+        if is_prompt_injection_or_out_of_scope(ctx.state.original_query):
+            ctx.state.parsed_intent = ParsedIntent(
+                intent=IntentType.ERROR,
+                query_for_rag=ctx.state.original_query,
+            )
+            ctx.state.final_answer = (
+                "I can only help with League of Legends questions, such as champion "
+                "recommendations, skin searches, matchups, builds, or player/profile analysis."
+            )
+            return StorePromptCacheNode()
 
         ctx.state.parsed_intent = parsed_intent
 
