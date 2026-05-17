@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
-export OLLAMA_NUM_PARALLEL=2
-export OLLAMA_MAX_LOADED_MODELS=2
+export CUDA_VISIBLE_DEVICES=0
+export OLLAMA_NUM_GPU=999
+export OLLAMA_FLASH_ATTN=1
+
+export OLLAMA_NUM_PARALLEL=1
+export OLLAMA_MAX_LOADED_MODELS=1
 export OLLAMA_HOST=127.0.0.1:11434
 
 sudo apt-get update -qq
@@ -17,8 +21,12 @@ curl -fsSL https://ollama.com/install.sh | sh
 
 # sleep 8
 
+echo "Checking GPU..."
+nvidia-smi
+
 # Start Ollama server in background
-ollama serve > /tmp/ollama.log 2>&1 &
+# ollama serve > /tmp/ollama.log 2>&1 &
+nohup ollama serve > /tmp/ollama.log 2>&1 &
 
 # Wait until server is ready
 until curl -s http://127.0.0.1:11434/api/tags > /dev/null; do
