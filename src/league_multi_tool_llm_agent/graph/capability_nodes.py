@@ -78,23 +78,25 @@ class ParseAndRouteNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
 
         ctx.state.parsed_intent = parsed_intent
 
-        if ctx.state.parsed_intent == IntentType.PROFILE_ANALYSIS:
+        if ctx.state.parsed_intent.intent == IntentType.PROFILE_ANALYSIS:
             return ProfileAnalysisNode()
 
-        if ctx.state.parsed_intent == IntentType.MATCH_HISTORY_ANALYSIS:
+        if ctx.state.parsed_intent.intent == IntentType.MATCH_HISTORY_ANALYSIS:
             return MatchHistoryAnalysisNode()
 
-        if ctx.state.parsed_intent == IntentType.CHAMPION_META:
+        if ctx.state.parsed_intent.intent == IntentType.CHAMPION_META:
             return ChampionMetaNode()
 
-        if ctx.state.parsed_intent == IntentType.MATCHUP_GUIDE:
+        if ctx.state.parsed_intent.intent == IntentType.MATCHUP_GUIDE:
             return MatchGuideNode()
 
-        if ctx.state.parsed_intent == IntentType.SKIN_SEARCH:
+        if ctx.state.parsed_intent.intent == IntentType.SKIN_SEARCH:
             return SkinSearchNode()
 
-        if ctx.state.parsed_intent == IntentType.CHAMPION_RECOMMENDATION:
+        if ctx.state.parsed_intent.intent == IntentType.CHAMPION_RECOMMENDATION:
             return RecommendationNode()
+
+        print("### ParseAndRouteNode falling back to RecommendationNode ###")
 
         return RecommendationNode()
 
@@ -245,6 +247,8 @@ class RecommendationNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
     ) -> AggregationNode | ErrorRecoveryNode:
+        print("### Starting RecommendationNode ###")
+
         if ctx.deps.rag_service is None or ctx.state.parsed_intent is None:
             return ErrorRecoveryNode()
 
@@ -253,7 +257,7 @@ class RecommendationNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
         retrieved_docs = await ctx.deps.rag_service.search(
             query=query,
             doc_type="champion_profile",
-            limit=5,
+            limit=6,
         )
         ctx.state.rag_docs = retrieved_docs
 
@@ -267,6 +271,8 @@ class SkinSearchNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
     ) -> AggregationNode | ErrorRecoveryNode:
+        print("### Starting SkinSearchNode ###")
+
         if ctx.deps.rag_service is None or ctx.state.parsed_intent is None:
             return ErrorRecoveryNode()
 
@@ -276,7 +282,7 @@ class SkinSearchNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
         retrieved_docs = await ctx.deps.rag_service.search(
             query=query,
             doc_type="champion_skin",
-            limit=5,
+            limit=6,
         )
 
         # Save for downstream synthesis

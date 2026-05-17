@@ -25,6 +25,9 @@ done
 
 # qwen3.5:9b-q4_K_M
 
+# for testing
+# qwen3.5:0.8b
+
 if ! ollama list | grep -q qwen3-embedding:0.6b; then
   ollama pull qwen3-embedding:0.6b
 fi

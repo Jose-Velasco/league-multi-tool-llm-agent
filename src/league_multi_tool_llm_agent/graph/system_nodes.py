@@ -82,7 +82,7 @@ class ErrorRecoveryNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
     ) -> End[FinalAnswer]:
-        print("In ErrorRecoveryNode")
+        print("### ErrorRecoveryNode ###")
         error_text = (ctx.state.last_error or "").lower()
         tool_name = ctx.state.failed_tool_name or ""
 

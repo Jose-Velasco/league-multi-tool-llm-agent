@@ -5,7 +5,12 @@ from sqlalchemy import URL
 
 from league_multi_tool_llm_agent.db.llm_utils import EmbeddingClient
 from league_multi_tool_llm_agent.db.rag_service import RagService
-from league_multi_tool_llm_agent.graph.agents import build_parser_agent
+from league_multi_tool_llm_agent.graph.agents import (
+    build_parser_agent,
+    build_reflection_agent,
+    build_revision_agent,
+    build_synthesis_agent,
+)
 from league_multi_tool_llm_agent.graph.capability_nodes import (
     BuildInitialAssistantStateNode,
     ChampionMetaNode,
@@ -23,6 +28,7 @@ from league_multi_tool_llm_agent.graph.prompt_cache import InMemoryDictCache
 from league_multi_tool_llm_agent.graph.prompting_techniques import (
     AggregationNode,
     ReflectionNode,
+    RevisionNode,
     StorePromptCacheNode,
     SynthesisNode,
 )
@@ -34,6 +40,7 @@ from league_multi_tool_llm_agent.models.graph_models import (
     AssistantState,
     FinalAnswer,
     GraphDeps,
+    UserQuery,
 )
 from league_multi_tool_llm_agent.models.rag_configs import RagSettings
 
@@ -56,6 +63,7 @@ async def main() -> None:
             ReflectionNode,
             StorePromptCacheNode,
             ErrorRecoveryNode,
+            RevisionNode,
         ),
         state_type=AssistantState,
         run_end_type=FinalAnswer,
@@ -63,13 +71,39 @@ async def main() -> None:
 
     local_llm_config = OllamaProviderConfig(OLLAMA_BASE_URL="http://ollama:11434/v1/")
 
+    model = "qwen3.5:2b-q4_K_M"
     parser_agent = build_parser_agent(
-        "gemma4:e2b-it-q4_K_M",
+        # "gemma4:e2b-it-q4_K_M",
+        # "gemma3:4b-it-qat",
+        model,
         ollama_provider_config=local_llm_config,
     )
     fallback_agent = build_fallback_agent(
         # "gemma4:e4b-it-q4_K_M", ollama_provider_config=local_llm_config
-        "gemma4:e2b-it-q4_K_M",
+        # "gemma4:e2b-it-q4_K_M",
+        # "gemma3:4b-it-qat",
+        model,
+        ollama_provider_config=local_llm_config,
+    )
+
+    synthesis_agent = build_synthesis_agent(
+        # "gemma4:e4b-it-q4_K_M", ollama_provider_config=local_llm_config
+        # "gemma4:e2b-it-q4_K_M",
+        model,
+        ollama_provider_config=local_llm_config,
+    )
+
+    reflection_agent = build_reflection_agent(
+        # "gemma4:e4b-it-q4_K_M", ollama_provider_config=local_llm_config
+        # "gemma4:e2b-it-q4_K_M",
+        model,
+        ollama_provider_config=local_llm_config,
+    )
+
+    revision_agent = build_revision_agent(
+        # "gemma4:e4b-it-q4_K_M", ollama_provider_config=local_llm_config
+        # "gemma4:e2b-it-q4_K_M",
+        model,
         ollama_provider_config=local_llm_config,
     )
 
@@ -92,14 +126,17 @@ async def main() -> None:
         prompt_cache=InMemoryDictCache(),
         fallback_agent=fallback_agent,
         parser_agent=parser_agent,
+        synthesis_agent=synthesis_agent,
+        reflection_agent=reflection_agent,
+        revision_agent=revision_agent,
         controller=None,
         rag_service=rag_service,
         llm_service=None,
     )
 
-    print(
-        league_assistant_graph.mermaid_code(start_node=BuildInitialAssistantStateNode)
-    )
+    # print(
+    #     league_assistant_graph.mermaid_code(start_node=BuildInitialAssistantStateNode)
+    # )
 
     # state0 = AssistantState()
 
@@ -187,24 +224,29 @@ async def main() -> None:
     # print()
     # print(f"{result_final_answer3.raw_context_blocks =}")
 
-    # state4 = AssistantState()
+    state4 = AssistantState()
 
-    # result4 = await league_assistant_graph.run(
-    #     start_node=BuildInitialAssistantStateNode(
-    #         user_input=UserQuery(
-    #             query="I like strong female leads and dark aesthetics",
-    #         )
-    #     ),
-    #     state=state4,
-    #     deps=deps,
-    # )
-    # print("\n#### Result4: ####\n")
-    # result_final_answer4 = result4.output
-    # print(f"{result_final_answer4.answer =}")
-    # print(f"{result_final_answer4.used_cache =}")
-    # print(f"{result_final_answer4.intent =}")
-    # print()
+    query4 = "Recommend champion: I like strong female leads and dark aesthetics"
+    result4 = await league_assistant_graph.run(
+        start_node=BuildInitialAssistantStateNode(
+            user_input=UserQuery(
+                query=query4,
+            )
+        ),
+        state=state4,
+        deps=deps,
+    )
+    print("\n#### Result4: ####\n")
+    result_final_answer4 = result4.output
+    print(f"{query4 = }")
+    print(f"{result_final_answer4.answer =}")
+    print(f"{result_final_answer4.used_cache =}")
+    print(f"{result_final_answer4.intent =}")
+    print()
     # print(f"{result_final_answer4.raw_context_blocks =}")
+    print(f"{result_final_answer4.synthesis_node_metadata =}")
+    print(f"{result_final_answer4.reflection_node_metadata =}")
+    print(f"{result_final_answer4.revision_answer_node_metadata =}")
 
 
 if __name__ == "__main__":

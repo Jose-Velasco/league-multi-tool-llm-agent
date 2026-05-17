@@ -182,6 +182,8 @@ async def fallback_mcp_agent(
     Returns:
         Extracted text from the selected MCP tool call.
     """
+    print("### Starting fallback_mcp_agent ###")
+
     if not tool_registry:
         tool_registry = await mcp_client.refresh_tool_registry()
 
