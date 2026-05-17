@@ -12,14 +12,21 @@ from league_multi_tool_llm_agent.graph.prompt_cache import PromptCache
 from league_multi_tool_llm_agent.integrations.opgg import OPGGMCPClient
 from league_multi_tool_llm_agent.models.rag_models import RagSearchResult
 
+# class IntentType(StrEnum):
+#     PROFILE_ANALYSIS = "profile_analysis"
+#     MATCH_HISTORY_ANALYSIS = "match_history_analysis"
+#     CHAMPION_META = "champion_meta"
+#     CHAMPION_RECOMMENDATION = "champion_recommendation"
+#     SKIN_SEARCH = "skin_search"
+#     MATCHUP_GUIDE = "matchup_guide"
+#     CACHED_RESPONSE = "cached_response"
+#     ERROR = "error"
+
 
 class IntentType(StrEnum):
-    PROFILE_ANALYSIS = "profile_analysis"
-    MATCH_HISTORY_ANALYSIS = "match_history_analysis"
-    CHAMPION_META = "champion_meta"
     CHAMPION_RECOMMENDATION = "champion_recommendation"
     SKIN_SEARCH = "skin_search"
-    MATCHUP_GUIDE = "matchup_guide"
+    OPGG_MCP = "opgg_mcp"
     CACHED_RESPONSE = "cached_response"
     ERROR = "error"
 
@@ -70,7 +77,9 @@ class AssistantState:
     champion_meta_text: str | None = None
     recommendation_text: str | None = None
     matchup_text: str | None = None
+    opgg_mpc_text: str | None = None
 
+    # RAG data
     rag_text: str | None = None
     rag_docs: list[RagSearchResult] | None = None
 

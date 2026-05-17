@@ -3,11 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field
 from pydantic_ai import Agent
 from pydantic_ai.models.ollama import OllamaModel
 from pydantic_ai.providers.ollama import OllamaProvider
 
+from league_multi_tool_llm_agent.graph.utils import extract_champion_name
+from league_multi_tool_llm_agent.integrations.opgg.field_presets import FieldPresets
 from league_multi_tool_llm_agent.models.agent_config import OllamaProviderConfig
 
 
@@ -141,22 +143,99 @@ def build_fallback_agent(
     instructions = (
         "You are selecting exactly one OP.GG MCP tool for a League of Legends assistant.\n"
         "Choose the single best tool for the user's request.\n"
-        "Return only a valid structured MCPToolSelection output.\n"
-        "Rules:\n"
-        "- Use the exact tool name from the provided tool list.\n"
+        "Return only valid MCPToolSelection structured output.\n\n"
+        "Default values:\n"
+        "- region: na\n"
+        "- lang: en_US\n"
+        "- position: mid\n"
+        "- game_mode: ranked\n\n"
+        "Tool selection rules:\n"
+        "- Use lol_get_champion_analysis for champion builds, counters, runes, items, tier, or patch/meta questions.\n"
+        "- Use lol_get_lane_matchup_guide only when both champions are known, such as 'Ahri vs Zed mid'.\n"
+        "- Use summoner/profile tools only when the user provides a Riot ID, username, rank, LP, profile, or match history request.\n"
+        "- Use lol_list_lane_meta_champions for broad lane tier lists like 'best mid champions'.\n"
+        "- Use lol_list_champion_details for lore, abilities, or champion descriptions.\n\n"
+        "Argument rules:\n"
+        "- Use exact tool names from the provided tool list.\n"
         "- Only include arguments that exist in the selected tool schema.\n"
-        "- Include all required arguments if they can be inferred from the user query and chat history.\n"
-        "- Do not invent tools.\n"
-        "- Do not invent unsupported argument names.\n"
-        "- Prefer the most direct tool for the request.\n"
-        "- If the request is ambiguous, choose the safest reasonable tool and best-effort arguments.\n"
+        "- Include required arguments if they can be inferred.\n"
+        "- Do not invent tools or unsupported argument names.\n"
+        "- If a champion counter query omits position, use position='mid'.\n"
+        "- If a request omits region, use region='na'.\n"
+        "- If a request omits language, use lang='en_US'.\n"
     )
 
     return Agent(
         model=model,
+        output_retries=3,
+        retries=3,
         output_type=MCPToolSelection,
         instructions=instructions,
     )
+
+
+# def build_fallback_agent(
+#     model_name: str = "gemma3:4b-it-qat",
+#     ollama_provider_config: OllamaProviderConfig | None = None,
+# ) -> Agent[None, MCPToolSelection]:
+#     """
+#     Build a PydanticAI agent that returns validated MCPToolSelection output.
+
+#     Current PydanticAI uses output_type rather than result_type.
+#     """
+#     if ollama_provider_config:
+#         model = OllamaModel(
+#             model_name,
+#             provider=OllamaProvider(
+#                 base_url=ollama_provider_config.OLLAMA_BASE_URL,
+#                 api_key=ollama_provider_config.OLLAMA_API_KEY,
+#             ),
+#         )
+#     else:
+#         model = OllamaModel(model_name)
+
+#     instructions = (
+#         "You are selecting exactly one OP.GG MCP tool for a League of Legends assistant.\n"
+#         "Choose the single best tool for the user's request.\n"
+#         "Return only a valid structured MCPToolSelection output.\n"
+#         "Rules:\n"
+#         "- Use the exact tool name from the provided tool list.\n"
+#         "- Only include arguments that exist in the selected tool schema.\n"
+#         "- Include all required arguments if they can be inferred from the user query and chat history.\n"
+#         "- Do not invent tools.\n"
+#         "- Do not invent unsupported argument names.\n"
+#         "- Prefer the most direct tool for the request.\n"
+#         "- If the request is ambiguous, choose the safest reasonable tool and best-effort arguments.\n"
+#     )
+
+#     return Agent(
+#         model=model,
+#         output_retries=2,
+#         output_type=MCPToolSelection,
+#         instructions=instructions,
+#     )
+
+
+def try_parse_route_direct_mcp_selection(user_query: str) -> MCPToolSelection | None:
+    """Handle common MCP routing cases without LLM selection."""
+    q = user_query.lower()
+
+    if "counter" in q or "counters" in q:
+        champion = extract_champion_name(user_query)
+        if champion:
+            return MCPToolSelection(
+                tool_name="lol_get_champion_analysis",
+                arguments={
+                    "champion": champion,
+                    "position": "mid",
+                    "game_mode": "ranked",
+                    "lang": "en_US",
+                    "desired_output_fields": FieldPresets.CHAMPION_COUNTERS_ONLY,
+                },
+                reasoning="Direct counter/meta query.",
+            )
+
+    return None
 
 
 async def fallback_mcp_agent(
@@ -168,21 +247,8 @@ async def fallback_mcp_agent(
     fallback_agent: Agent[None, MCPToolSelection],
     allowed_tool_names: list[str] | None = None,
 ) -> str:
-    """
-    LLM-guided fallback MCP tool selection.
-
-    Args:
-        user_query: Current user request.
-        chat_history: Recent conversation history.
-        tool_registry: Cached registry from OPGGMCPClient.refresh_tool_registry().
-        mcp_client: Your OPGGMCPClient instance.
-        fallback_agent: PydanticAI agent with output_type=MCPToolSelection.
-        allowed_tool_names: Optional whitelist for this node/branch.
-
-    Returns:
-        Extracted text from the selected MCP tool call.
-    """
-    print("### Starting fallback_mcp_agent ###")
+    """Select and execute one OP.GG MCP tool using an LLM fallback agent."""
+    print("### Starting OPGG MCP agent ###")
 
     if not tool_registry:
         tool_registry = await mcp_client.refresh_tool_registry()
@@ -201,44 +267,155 @@ async def fallback_mcp_agent(
     compact_tools = _compact_tool_registry(candidate_registry)
     history_text = _format_chat_history(chat_history)
 
-    prompt = f"""
-        User query:
-        {user_query}
+    prompt = f"""User query:
+    {user_query}
 
-        Recent chat history:
-        {history_text}
+    Recent chat history:
+    {history_text}
 
-        Available MCP tools:
-        {compact_tools}
+    Available MCP tools:
+    {compact_tools}
 
-        Select the single best tool and arguments.
-        """.strip()
+    Select the single best tool and arguments.
+
+    Defaults to use when missing:
+    - region: na
+    - lang: en_US
+    - position: mid
+    - game_mode: ranked
+
+    For counter/build/meta questions, prefer:
+    - lol_get_champion_analysis
+
+    For specific champion-vs-champion lane questions, prefer:
+    - lol_get_lane_matchup_guide
+
+    For profile, rank, LP, or match history questions, prefer summoner tools.
+    """
 
     selection: MCPToolSelection | None = None
-    try:
-        # run_result = await fallback_agent.run(prompt)
-        # selection = run_result.output
-        selection = (await fallback_agent.run(prompt)).output
-        result = await mcp_client.call_tool(selection.tool_name, selection.arguments)
-    except ValidationError as e:
-        error_message = f"Fallback agent failed before tool execution: {e}"
-        if selection:
-            error_message += selection.model_dump_json()
-
-        raise FallbackMCPAgentError(error_message) from e
-    except Exception as e:
-        error_message = f"Fallback agent failed before tool execution: {e}"
-        if selection:
-            error_message += selection.model_dump_json()
-
-        raise FallbackMCPAgentError(error_message) from e
-
-    _validate_selection_against_registry(selection, candidate_registry)
 
     try:
-        result = await mcp_client.call_tool(selection.tool_name, selection.arguments)
-        return mcp_client.extract_text(result)
+        direct_selection = try_parse_route_direct_mcp_selection(user_query)
+        if direct_selection is not None:
+            selection = direct_selection
+        else:
+            selection = (await fallback_agent.run(prompt)).output
+
+        print(selection)
+
+        # selection = (await fallback_agent.run(prompt)).output
+
+        _validate_selection_against_registry(selection, candidate_registry)
+
+        result = await mcp_client.call_tool(
+            selection.tool_name,
+            selection.arguments,
+        )
+        print("#####")
+        print(result)
+
+        text = mcp_client.extract_text(result)
+        if not text:
+            raise FallbackMCPAgentError(
+                f"MCP tool returned empty text: tool={selection.tool_name}, "
+                f"arguments={selection.arguments}"
+            )
+
+        print("#####")
+        print(text)
+        return text
+
     except Exception as e:
+        details = ""
+        if selection is not None:
+            details = f" selection={selection.model_dump_json()}"
+
         raise FallbackMCPAgentError(
-            f"Fallback MCP tool execution failed: tool={selection.tool_name}, {selection.arguments = }, {selection.reasoning = }, error={e}"
+            f"Fallback MCP agent failed.{details} error={e}"
         ) from e
+
+
+# async def fallback_mcp_agent(
+#     *,
+#     user_query: str,
+#     chat_history: list[ChatMessage] | list[dict[str, str]] | None,
+#     tool_registry: dict[str, Any],
+#     mcp_client: Any,
+#     fallback_agent: Agent[None, MCPToolSelection],
+#     allowed_tool_names: list[str] | None = None,
+# ) -> str:
+#     """
+#     LLM-guided fallback MCP tool selection.
+
+#     Args:
+#         user_query: Current user request.
+#         chat_history: Recent conversation history.
+#         tool_registry: Cached registry from OPGGMCPClient.refresh_tool_registry().
+#         mcp_client: Your OPGGMCPClient instance.
+#         fallback_agent: PydanticAI agent with output_type=MCPToolSelection.
+#         allowed_tool_names: Optional whitelist for this node/branch.
+
+#     Returns:
+#         Extracted text from the selected MCP tool call.
+#     """
+#     print("### Starting OPGG MCP agent ###")
+
+#     if not tool_registry:
+#         tool_registry = await mcp_client.refresh_tool_registry()
+
+#     candidate_registry = tool_registry
+#     if allowed_tool_names is not None:
+#         candidate_registry = {
+#             name: tool
+#             for name, tool in tool_registry.items()
+#             if name in allowed_tool_names
+#         }
+
+#     if not candidate_registry:
+#         raise FallbackMCPAgentError("No MCP tools available for fallback selection.")
+
+#     compact_tools = _compact_tool_registry(candidate_registry)
+#     history_text = _format_chat_history(chat_history)
+
+#     prompt = f"""
+#         User query:
+#         {user_query}
+
+#         Recent chat history:
+#         {history_text}
+
+#         Available MCP tools:
+#         {compact_tools}
+
+#         Select the single best tool and arguments.
+#         """.strip()
+
+#     selection: MCPToolSelection | None = None
+#     try:
+#         # run_result = await fallback_agent.run(prompt)
+#         # selection = run_result.output
+#         selection = (await fallback_agent.run(prompt)).output
+#         result = await mcp_client.call_tool(selection.tool_name, selection.arguments)
+#     except ValidationError as e:
+#         error_message = f"Fallback agent failed before tool execution: {e}"
+#         if selection:
+#             error_message += selection.model_dump_json()
+
+#         raise FallbackMCPAgentError(error_message) from e
+#     except Exception as e:
+#         error_message = f"Fallback agent failed before tool execution: {e}"
+#         if selection:
+#             error_message += selection.model_dump_json()
+
+#         raise FallbackMCPAgentError(error_message) from e
+
+#     _validate_selection_against_registry(selection, candidate_registry)
+
+#     try:
+#         result = await mcp_client.call_tool(selection.tool_name, selection.arguments)
+#         return mcp_client.extract_text(result)
+#     except Exception as e:
+#         raise FallbackMCPAgentError(
+#             f"Fallback MCP tool execution failed: tool={selection.tool_name}, {selection.arguments = }, {selection.reasoning = }, error={e}"
+#         ) from e

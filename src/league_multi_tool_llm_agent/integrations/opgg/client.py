@@ -194,8 +194,8 @@ class OPGGMCPClient:
         self,
         *,
         champion: str,
-        position: LoLPosition = "all",
-        game_mode: LoLGameMode = "ranked",
+        position: LoLPosition | None = None,
+        game_mode: LoLGameMode | None = None,
         lang: LoLLanguage | None = None,
         desired_output_fields: Iterable[str] | None = None,
     ) -> Any:
@@ -204,9 +204,9 @@ class OPGGMCPClient:
             "lol_get_champion_analysis",
             {
                 "champion": champion,
-                "position": position,
-                "game_mode": game_mode,
-                "lang": lang or self.config.DEFAULT_LANG,
+                "position": self._position(position),
+                "game_mode": self._game_mode(game_mode),
+                "lang": self._lang(lang),
                 "desired_output_fields": self._fields(
                     desired_output_fields,
                     FieldPresets.CHAMPION_ANALYSIS_CORE,
@@ -214,12 +214,36 @@ class OPGGMCPClient:
             },
         )
 
+    # async def get_champion_analysis(
+    #     self,
+    #     *,
+    #     champion: str,
+    #     position: LoLPosition = "all",
+    #     game_mode: LoLGameMode = "ranked",
+    #     lang: LoLLanguage | None = None,
+    #     desired_output_fields: Iterable[str] | None = None,
+    # ) -> Any:
+    #     """Get champion meta, runes, items, and counters."""
+    #     return await self.call_tool(
+    #         "lol_get_champion_analysis",
+    #         {
+    #             "champion": champion,
+    #             "position": position,
+    #             "game_mode": game_mode,
+    #             "lang": lang or self.config.DEFAULT_LANG,
+    #             "desired_output_fields": self._fields(
+    #                 desired_output_fields,
+    #                 FieldPresets.CHAMPION_ANALYSIS_CORE,
+    #             ),
+    #         },
+    #     )
+
     async def get_lane_matchup_guide(
         self,
         *,
         my_champion: str,
         opponent_champion: str,
-        position: LoLPosition = "all",
+        position: LoLPosition | None = None,
         lang: LoLLanguage | None = None,
     ) -> Any:
         """Get a specific lane matchup guide."""
@@ -228,10 +252,29 @@ class OPGGMCPClient:
             {
                 "my_champion": my_champion,
                 "opponent_champion": opponent_champion,
-                "position": position,
-                "lang": lang or self.config.DEFAULT_LANG,
+                "position": self._position(position),
+                "lang": self._lang(lang),
             },
         )
+
+    # async def get_lane_matchup_guide(
+    #     self,
+    #     *,
+    #     my_champion: str,
+    #     opponent_champion: str,
+    #     position: LoLPosition = "all",
+    #     lang: LoLLanguage | None = None,
+    # ) -> Any:
+    #     """Get a specific lane matchup guide."""
+    #     return await self.call_tool(
+    #         "lol_get_lane_matchup_guide",
+    #         {
+    #             "my_champion": my_champion,
+    #             "opponent_champion": opponent_champion,
+    #             "position": position,
+    #             "lang": lang or self.config.DEFAULT_LANG,
+    #         },
+    #     )
 
     # async def search_champion_meta(self, *, query: str) -> Any:
     #     """Run the LoL champion RAG search tool."""
@@ -327,7 +370,7 @@ class OPGGMCPClient:
     async def list_lane_meta_champions(
         self,
         *,
-        position: LoLPosition = "all",
+        position: LoLPosition | None = None,
         lang: LoLLanguage | None = None,
         desired_output_fields: Iterable[str] | None = None,
     ) -> Any:
@@ -335,13 +378,50 @@ class OPGGMCPClient:
         return await self.call_tool(
             "lol_list_lane_meta_champions",
             {
-                "position": position,
-                "lang": lang or self.config.DEFAULT_LANG,
+                "position": self._position(position),
+                "lang": self._lang(lang),
                 "desired_output_fields": self._fields(
                     desired_output_fields,
                     FieldPresets.LANE_META_BASIC,
                 ),
             },
+        )
+
+    # async def list_lane_meta_champions(
+    #     self,
+    #     *,
+    #     position: LoLPosition = "all",
+    #     lang: LoLLanguage | None = None,
+    #     desired_output_fields: Iterable[str] | None = None,
+    # ) -> Any:
+    #     """Get lane-by-lane champion tier data."""
+    #     return await self.call_tool(
+    #         "lol_list_lane_meta_champions",
+    #         {
+    #             "position": position,
+    #             "lang": lang or self.config.DEFAULT_LANG,
+    #             "desired_output_fields": self._fields(
+    #                 desired_output_fields,
+    #                 FieldPresets.LANE_META_BASIC,
+    #             ),
+    #         },
+    #     )
+
+    async def get_champion_counters(
+        self,
+        *,
+        champion: str,
+        position: LoLPosition | None = None,
+        game_mode: LoLGameMode | None = None,
+        lang: LoLLanguage | None = None,
+    ) -> Any:
+        """Get compact counter information for a champion."""
+        return await self.get_champion_analysis(
+            champion=champion,
+            position=position,
+            game_mode=game_mode,
+            lang=lang,
+            desired_output_fields=FieldPresets.CHAMPION_COUNTERS_ONLY,
         )
 
     async def list_discounted_skins(
@@ -405,3 +485,19 @@ class OPGGMCPClient:
             "lol_esports_list_team_standings",
             {"short_name": short_name},
         )
+
+    def _region(self, region: LoLRegion | None) -> LoLRegion:
+        """Use caller region or configured default."""
+        return region or self.config.DEFAULT_REGION
+
+    def _lang(self, lang: LoLLanguage | None) -> LoLLanguage:
+        """Use caller language or configured default."""
+        return lang or self.config.DEFAULT_LANG
+
+    def _position(self, position: LoLPosition | None) -> LoLPosition:
+        """Use caller position or configured default."""
+        return position or self.config.DEFAULT_POSITION
+
+    def _game_mode(self, game_mode: LoLGameMode | None) -> LoLGameMode:
+        """Use caller game mode or configured default."""
+        return game_mode or self.config.DEFAULT_GAME_MODE

@@ -89,3 +89,11 @@ class FieldPresets:
         "lang",
         "data[].{champion_id,champion_key,champion_name,skin_id,skin_name,cost,currency,discount_rate,started_at,ended_at}",
     ]
+
+    CHAMPION_COUNTERS_ONLY = [
+        "champion",
+        "position",
+        "data.summary.average_stats.{tier,rank,win_rate,pick_rate,ban_rate}",
+        "data.strong_counters[].{champion_name,play,win_rate}",
+        "data.weak_counters[].{champion_name,play,win_rate}",
+    ]

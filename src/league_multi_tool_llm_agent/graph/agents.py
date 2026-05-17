@@ -10,13 +10,50 @@ from league_multi_tool_llm_agent.models.graph_models import (
     SynthesizedAnswer,
 )
 
+# def build_parser_agent(
+#     model_name: str = "gemma3:4b-it-qat",
+#     ollama_provider_config: OllamaProviderConfig | None = None,
+# ) -> Agent[None, ParsedIntent]:
+#     model = build_ollama_agent_model(
+#         model_name=model_name, ollama_provider_config=ollama_provider_config
+#     )
+
+#     return Agent(
+#         model=model,
+#         # retries=2,
+#         output_retries=2,
+#         output_type=ParsedIntent,
+#         instructions=(
+#             "You parse League of Legends assistant user requests into structured intent.\n\n"
+#             "Allowed intents:\n"
+#             "- champion_recommendation: user wants champion suggestions, mains, role picks, or personality/playstyle-based recommendations.\n"
+#             "- skin_search: user asks about skins, skin aesthetics, visual themes, or cosmetic recommendations.\n"
+#             "- unknown: request is not clearly about champion recommendation or skins.\n\n"
+#             "Extract preferences when present:\n"
+#             "- role_preference: top, jungle, mid, adc/bottom, support, teamwork, carry, etc.\n"
+#             "- aesthetic_preference: dark, cute, elegant, futuristic, spirit, monster, celestial, etc.\n"
+#             "- personality_preference: strong female lead, calm, aggressive, strategic, chaotic, protective, etc.\n"
+#             "- playstyle_preference: supportive, aggressive, beginner-friendly, mobile, tanky, ranged, burst, utility, etc.\n"
+#             "- difficulty_preference: easy, beginner, hard, mechanical, simple, etc.\n\n"
+#             "query_for_rag should be a concise search query combining the user's strongest preferences. "
+#             "Do not include irrelevant filler words."
+#             "If the request is skin_search, include skin/aesthetic/theme keywords.\n"
+#         ),
+#         model_settings=ModelSettings(
+#             temperature=0.0,
+#             thinking=False,
+#         ),
+#     )
+
 
 def build_parser_agent(
     model_name: str = "gemma3:4b-it-qat",
     ollama_provider_config: OllamaProviderConfig | None = None,
 ) -> Agent[None, ParsedIntent]:
+    """Build an intent parser agent for the League assistant graph"""
     model = build_ollama_agent_model(
-        model_name=model_name, ollama_provider_config=ollama_provider_config
+        model_name=model_name,
+        ollama_provider_config=ollama_provider_config,
     )
 
     return Agent(
@@ -27,18 +64,43 @@ def build_parser_agent(
         instructions=(
             "You parse League of Legends assistant user requests into structured intent.\n\n"
             "Allowed intents:\n"
-            "- champion_recommendation: user wants champion suggestions, mains, role picks, or personality/playstyle-based recommendations.\n"
-            "- skin_search: user asks about skins, skin aesthetics, visual themes, or cosmetic recommendations.\n"
-            "- unknown: request is not clearly about champion recommendation or skins.\n\n"
+            "- champion_recommendation: user wants champion suggestions, mains, role picks, beginner picks, or personality/playstyle-based recommendations.\n"
+            "- skin_search: user asks about skins, skin aesthetics, splash art, cosmetic themes, or skin recommendations.\n"
+            "- opgg_mcp: user requests live or account-specific information that should use OPGG MCP tools.\n"
+            "- error: request is unrelated, unsupported, unsafe, impossible to satisfy, or not clearly a League of Legends assistant request.\n\n"
+            "Use opgg_mcp for requests involving:\n"
+            "- summoner/player profiles\n"
+            "- Riot IDs or usernames\n"
+            "- ranks, LP, win rates, match history\n"
+            "- live meta information\n"
+            "- builds, counters, runes, or tier lists requiring current data\n"
+            "- esports schedules or live game information\n"
+            "- champion synergy/counter lookups\n\n"
+            "Examples of opgg_mcp:\n"
+            "- 'Analyze my ranked games'\n"
+            "- 'What is Faker playing lately?'\n"
+            "- 'Best counters to Ahri this patch'\n"
+            "- 'Show my match history'\n"
+            "- 'Current jungle tier list'\n\n"
+            "Use error when:\n"
+            "- the request is unrelated to League of Legends\n"
+            "- the request is unsafe or abusive\n"
+            "- the request asks for impossible/private/internal information\n"
+            "- the user intent is too unclear to route safely\n\n"
             "Extract preferences when present:\n"
             "- role_preference: top, jungle, mid, adc/bottom, support, teamwork, carry, etc.\n"
-            "- aesthetic_preference: dark, cute, elegant, futuristic, spirit, monster, celestial, etc.\n"
+            "- aesthetic_preference: dark, cute, elegant, futuristic, spirit, monster, celestial, magical, robotic, fiery, etc.\n"
             "- personality_preference: strong female lead, calm, aggressive, strategic, chaotic, protective, etc.\n"
-            "- playstyle_preference: supportive, aggressive, beginner-friendly, mobile, tanky, ranged, burst, utility, etc.\n"
-            "- difficulty_preference: easy, beginner, hard, mechanical, simple, etc.\n\n"
-            "query_for_rag should be a concise search query combining the user's strongest preferences. "
-            "Do not include irrelevant filler words."
-            "If the request is skin_search, include skin/aesthetic/theme keywords.\n"
+            "- playstyle_preference: supportive, aggressive, beginner-friendly, mobile, tanky, ranged, burst, utility, scaling, roaming, etc.\n"
+            "- difficulty_preference: easy, beginner, hard, mechanical, simple, advanced, etc.\n\n"
+            "query_for_rag rules:\n"
+            "- query_for_rag should be a concise retrieval query combining the user's strongest preferences.\n"
+            "- Include champion names, themes, aesthetics, or roles when useful.\n"
+            "- Do not include filler words.\n"
+            "- If the request is skin_search, include skin/aesthetic/theme keywords.\n"
+            "- If the request is opgg_mcp, include the main target entity such as champion name, Riot ID, role, or meta topic.\n"
+            "- If the request is error, set query_for_rag to the original user request.\n\n"
+            "Return only valid structured output matching the schema."
         ),
         model_settings=ModelSettings(
             temperature=0.0,
@@ -51,7 +113,7 @@ def build_synthesis_agent(
     model_name: str = "gemma3:4b-it-qat",
     ollama_provider_config: OllamaProviderConfig | None = None,
 ) -> Agent[None, SynthesizedAnswer]:
-    """Build an agent that synthesizes the final recommendation response."""
+    """Build an agent that synthesizes the final recommendation response"""
     model = build_ollama_agent_model(
         model_name=model_name,
         ollama_provider_config=ollama_provider_config,
@@ -77,7 +139,6 @@ def build_synthesis_agent(
             "- Explain why each recommendation fits the user's preferences.\n"
             "- If retrieved context is provided, use it and do not contradict it.\n"
             "- If tool output is provided, treat it as higher priority than general knowledge.\n"
-            "- Be concise and helpful.\n"
             "- Do not mention internal implementation details such as RAG, pgvector, MCP, or graph nodes.\n"
             "- Do not invent player stats, match history, ranks, or live meta information if not provided.\n"
             "- If the available context is weak, say so briefly and give a best-effort recommendation.\n\n"
@@ -149,7 +210,7 @@ def build_reflection_agent(
     model_name: str = "gemma3:4b-it-qat",
     ollama_provider_config: OllamaProviderConfig | None = None,
 ) -> Agent[None, ReflectionResult]:
-    """Build an agent that reviews the synthesized answer before returning it."""
+    """Build an agent that reviews the synthesized answer before returning it"""
     model = build_ollama_agent_model(
         model_name=model_name,
         ollama_provider_config=ollama_provider_config,
@@ -260,7 +321,7 @@ def build_revision_agent(
     model_name: str = "gemma3:4b-it-qat",
     ollama_provider_config: OllamaProviderConfig | None = None,
 ) -> Agent[None, RevisedAnswer]:
-    """Build an agent that revises answers after reflection feedback."""
+    """Build an agent that revises answers after reflection feedback"""
     model = build_ollama_agent_model(
         model_name=model_name,
         ollama_provider_config=ollama_provider_config,

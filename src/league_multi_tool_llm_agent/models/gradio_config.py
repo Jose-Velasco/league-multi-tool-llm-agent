@@ -43,6 +43,9 @@ class GradioAppSettings(BaseSettings):
             "Recommend cute skins for a support champion.",
             "Give me beginner-friendly mid champions.",
             "Suggest space themed skins with robotic vibes.",
+            "Best counters to Ahri mid lane.",
+            "who beats twisted fate mid?",
+            "How do I play against lee sin jungle?",
         ]
     )
 

@@ -6,12 +6,208 @@ from pydantic_ai.providers.ollama import OllamaProvider
 from league_multi_tool_llm_agent.models.agent_config import OllamaProviderConfig
 from league_multi_tool_llm_agent.models.graph_models import IntentType, ParsedIntent
 
+# async def route_intent(query: str) -> IntentType:
+#     q = query.lower()
+
+#     if "build" in q or "counter" in q or "tier" in q or "meta" in q:
+#         return IntentType.CHAMPION_META
+
+#     if any(
+#         w in q
+#         for w in [
+#             "recommend",
+#             "suggest",
+#             "main",
+#             "what should i play",
+#             "who should i play",
+#         ]
+#     ):
+#         return IntentType.CHAMPION_RECOMMENDATION
+
+#     if "matchup" in q or "vs " in q:
+#         return IntentType.MATCHUP_GUIDE
+
+#     if "match history" in q or "recent games" in q or "how am i doing" in q:
+#         return IntentType.MATCH_HISTORY_ANALYSIS
+
+#     if "rank" in q or "profile" in q or "lp" in q:
+#         return IntentType.PROFILE_ANALYSIS
+
+#     if "skin" in q:
+#         return IntentType.SKIN_SEARCH
+
+#     return IntentType.CHAMPION_RECOMMENDATION
+
+KNOWN_CHAMPIONS = {
+    "aatrox",
+    "ahri",
+    "akali",
+    "akshan",
+    "alistar",
+    "amumu",
+    "anivia",
+    "annie",
+    "aphelios",
+    "ashe",
+    "aurelion sol",
+    "azir",
+    "bard",
+    "belveth",
+    "blitzcrank",
+    "brand",
+    "braum",
+    "caitlyn",
+    "camille",
+    "cassiopeia",
+    "chogath",
+    "corki",
+    "darius",
+    "diana",
+    "draven",
+    "ekko",
+    "elise",
+    "evelynn",
+    "ezreal",
+    "fiddlesticks",
+    "fiora",
+    "fizz",
+    "galio",
+    "gangplank",
+    "garen",
+    "gnar",
+    "gragas",
+    "graves",
+    "gwen",
+    "hecarim",
+    "heimerdinger",
+    "hwei",
+    "illaoi",
+    "irelia",
+    "ivern",
+    "janna",
+    "jarvan iv",
+    "jax",
+    "jayce",
+    "jhin",
+    "jinx",
+    "kaisa",
+    "kalista",
+    "karma",
+    "karthus",
+    "kassadin",
+    "katarina",
+    "kayle",
+    "kayn",
+    "kennen",
+    "khazix",
+    "kindred",
+    "kled",
+    "kogmaw",
+    "leblanc",
+    "lee sin",
+    "leona",
+    "lillia",
+    "lissandra",
+    "lucian",
+    "lulu",
+    "lux",
+    "malphite",
+    "malzahar",
+    "maokai",
+    "master yi",
+    "milio",
+    "miss fortune",
+    "mordekaiser",
+    "morgana",
+    "naafiri",
+    "nami",
+    "nasus",
+    "nautilus",
+    "neeko",
+    "nidalee",
+    "nilah",
+    "nocturne",
+    "nunu",
+    "olaf",
+    "orianna",
+    "ornn",
+    "pantheon",
+    "poppy",
+    "pyke",
+    "qiyana",
+    "quinn",
+    "rakan",
+    "rammus",
+    "reksai",
+    "rell",
+    "renata",
+    "renekton",
+    "rengar",
+    "riven",
+    "rumble",
+    "ryze",
+    "samira",
+    "sejuani",
+    "senna",
+    "seraphine",
+    "sett",
+    "shaco",
+    "shen",
+    "shyvana",
+    "singed",
+    "sion",
+    "sivir",
+    "skarner",
+    "smolder",
+    "sona",
+    "soraka",
+    "swain",
+    "sylas",
+    "syndra",
+    "tahm kench",
+    "taliyah",
+    "talon",
+    "taric",
+    "teemo",
+    "thresh",
+    "tristana",
+    "trundle",
+    "tryndamere",
+    "twisted fate",
+    "twitch",
+    "udyr",
+    "urgot",
+    "varus",
+    "vayne",
+    "veigar",
+    "velkoz",
+    "vex",
+    "vi",
+    "viego",
+    "viktor",
+    "vladimir",
+    "volibear",
+    "warwick",
+    "wukong",
+    "xayah",
+    "xerath",
+    "xin zhao",
+    "yasuo",
+    "yone",
+    "yorick",
+    "yuumi",
+    "zac",
+    "zed",
+    "zeri",
+    "ziggs",
+    "zilean",
+    "zoe",
+    "zyra",
+}
+
 
 async def route_intent(query: str) -> IntentType:
     q = query.lower()
-
-    if "build" in q or "counter" in q or "tier" in q or "meta" in q:
-        return IntentType.CHAMPION_META
 
     if any(
         w in q
@@ -25,19 +221,10 @@ async def route_intent(query: str) -> IntentType:
     ):
         return IntentType.CHAMPION_RECOMMENDATION
 
-    if "matchup" in q or "vs " in q:
-        return IntentType.MATCHUP_GUIDE
-
-    if "match history" in q or "recent games" in q or "how am i doing" in q:
-        return IntentType.MATCH_HISTORY_ANALYSIS
-
-    if "rank" in q or "profile" in q or "lp" in q:
-        return IntentType.PROFILE_ANALYSIS
-
     if "skin" in q:
         return IntentType.SKIN_SEARCH
 
-    return IntentType.CHAMPION_RECOMMENDATION
+    return IntentType.OPGG_MCP
 
 
 async def parse_intent_with_fallback(
@@ -49,13 +236,18 @@ async def parse_intent_with_fallback(
         parsed: ParsedIntent = result.output
 
         # Safety: if LLM gives bad/unknown intent => fallback
+        # if parsed.intent not in {
+        #     IntentType.CHAMPION_RECOMMENDATION,
+        #     IntentType.SKIN_SEARCH,
+        #     IntentType.CHAMPION_META,
+        #     IntentType.MATCHUP_GUIDE,
+        #     IntentType.MATCH_HISTORY_ANALYSIS,
+        #     IntentType.PROFILE_ANALYSIS,
+        # }:
         if parsed.intent not in {
             IntentType.CHAMPION_RECOMMENDATION,
             IntentType.SKIN_SEARCH,
-            IntentType.CHAMPION_META,
-            IntentType.MATCHUP_GUIDE,
-            IntentType.MATCH_HISTORY_ANALYSIS,
-            IntentType.PROFILE_ANALYSIS,
+            IntentType.OPGG_MCP,
         }:
             fallback_intent = await route_intent(user_prompt)
             parsed.intent = fallback_intent
@@ -90,6 +282,31 @@ def build_ollama_agent_model(
     else:
         model = OllamaModel(model_name)
     return model
+
+
+import re
+
+
+def normalize_text(text: str) -> str:
+    """Normalize text for champion matching."""
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def extract_champion_name(user_query: str) -> str | None:
+    """Extract the first matching champion name from a query."""
+    normalized_query = normalize_text(user_query)
+
+    # Sort longest-first so "twisted fate" matches before "fate"
+    for champion in sorted(KNOWN_CHAMPIONS, key=len, reverse=True):
+        pattern = rf"\b{re.escape(champion)}\b"
+
+        if re.search(pattern, normalized_query):
+            return champion.title()
+
+    return None
 
 
 # async def route_intent(query: str) -> IntentType:

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 
 from pydantic_graph import BaseNode, End, GraphRunContext
 
+from league_multi_tool_llm_agent.graph.catch_all_node import fallback_mcp_agent
 from league_multi_tool_llm_agent.graph.prompting_techniques import AggregationNode
 from league_multi_tool_llm_agent.graph.system_nodes import (
     ErrorRecoveryNode,
@@ -26,7 +27,6 @@ class BuildInitialAssistantStateNode(BaseNode[AssistantState, GraphDeps, FinalAn
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
     ) -> PromptCacheCheckNode:
-        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
         ctx.state.original_query = self.user_input.query
         ctx.state.parsed_query = self.user_input
         ctx.state.cache_key = self.user_input.query.strip().lower()
@@ -38,8 +38,6 @@ class PromptCacheCheckNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
     ) -> ParseAndRouteNode | ReturnCachedResponseNode:
-        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
-        # cached = await cache_lookup(ctx.deps.prompt_cache, ctx.state.cache_key or "")
         cached = (
             ctx.deps.prompt_cache.get(ctx.state.cache_key or "")
             if ctx.deps.prompt_cache
@@ -56,19 +54,24 @@ class PromptCacheCheckNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
         return ParseAndRouteNode()
 
 
+# @dataclass
+# class ParseAndRouteNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
+#     async def run(
+#         self, ctx: GraphRunContext[AssistantState, GraphDeps]
+#     ) -> (
+#         ProfileAnalysisNode
+#         | MatchHistoryAnalysisNode
+#         | ChampionMetaNode
+#         | MatchGuideNode
+#         | SkinSearchNode
+#         | RecommendationNode
+#         | OPGG_MPC_Node
+#     ):
 @dataclass
 class ParseAndRouteNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
         self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> (
-        ProfileAnalysisNode
-        | MatchHistoryAnalysisNode
-        | ChampionMetaNode
-        | MatchGuideNode
-        | SkinSearchNode
-        | RecommendationNode
-    ):
-        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
+    ) -> SkinSearchNode | RecommendationNode | OPGG_MPC_Node:
         assert ctx.state.parsed_query is not None
 
         parsed_intent = await parse_intent_with_fallback(
@@ -78,27 +81,30 @@ class ParseAndRouteNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
 
         ctx.state.parsed_intent = parsed_intent
 
-        if ctx.state.parsed_intent.intent == IntentType.PROFILE_ANALYSIS:
-            return ProfileAnalysisNode()
+        # if ctx.state.parsed_intent.intent == IntentType.PROFILE_ANALYSIS:
+        #     return ProfileAnalysisNode()
 
-        if ctx.state.parsed_intent.intent == IntentType.MATCH_HISTORY_ANALYSIS:
-            return MatchHistoryAnalysisNode()
+        # if ctx.state.parsed_intent.intent == IntentType.MATCH_HISTORY_ANALYSIS:
+        #     return MatchHistoryAnalysisNode()
 
-        if ctx.state.parsed_intent.intent == IntentType.CHAMPION_META:
-            return ChampionMetaNode()
+        # if ctx.state.parsed_intent.intent == IntentType.CHAMPION_META:
+        #     return ChampionMetaNode()
 
-        if ctx.state.parsed_intent.intent == IntentType.MATCHUP_GUIDE:
-            return MatchGuideNode()
+        # if ctx.state.parsed_intent.intent == IntentType.MATCHUP_GUIDE:
+        #     return MatchGuideNode()
 
-        if ctx.state.parsed_intent.intent == IntentType.SKIN_SEARCH:
+        if parsed_intent.intent == IntentType.SKIN_SEARCH:
             return SkinSearchNode()
 
-        if ctx.state.parsed_intent.intent == IntentType.CHAMPION_RECOMMENDATION:
+        if parsed_intent.intent == IntentType.CHAMPION_RECOMMENDATION:
             return RecommendationNode()
 
-        print("### ParseAndRouteNode falling back to RecommendationNode ###")
+        if parsed_intent.intent == IntentType.CHAMPION_RECOMMENDATION:
+            return OPGG_MPC_Node()
 
-        return RecommendationNode()
+        print("### ParseAndRouteNode falling back to OPGG_MPC_Node ###")
+
+        return OPGG_MPC_Node()
 
 
 # @dataclass
@@ -137,109 +143,109 @@ class ReturnCachedResponseNode(BaseNode[AssistantState, GraphDeps, FinalAnswer])
         )
 
 
-@dataclass
-class ProfileAnalysisNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
-    async def run(
-        self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> AggregationNode | ErrorRecoveryNode:
-        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
-        q = ctx.state.parsed_query
-        assert q is not None
+# @dataclass
+# class ProfileAnalysisNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
+#     async def run(
+#         self, ctx: GraphRunContext[AssistantState, GraphDeps]
+#     ) -> AggregationNode | ErrorRecoveryNode:
+#         # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
+#         q = ctx.state.parsed_query
+#         assert q is not None
 
-        # if q.riot_id is None:
-        #     return End(
-        #         FinalAnswer(
-        #             answer="Please provide your Riot ID (for example, Pobelter#NA1) and region so I can analyze your profile."
-        #         )
-        #     )
+#         # if q.riot_id is None:
+#         #     return End(
+#         #         FinalAnswer(
+#         #             answer="Please provide your Riot ID (for example, Pobelter#NA1) and region so I can analyze your profile."
+#         #         )
+#         #     )
 
-        try:
-            result = await ctx.deps.opgg_client.get_summoner_profile(
-                riot_id=q.riot_id,
-                # region=q.region,
-            )
-            ctx.state.profile_text = ctx.deps.opgg_client.extract_text(result)
+#         try:
+#             result = await ctx.deps.opgg_client.get_summoner_profile(
+#                 riot_id=q.riot_id,
+#                 # region=q.region,
+#             )
+#             ctx.state.profile_text = ctx.deps.opgg_client.extract_text(result)
 
-            return AggregationNode()
-        except Exception as e:
-            # ctx.state.last_error = str(e)
+#             return AggregationNode()
+#         except Exception as e:
+#             # ctx.state.last_error = str(e)
 
-            # ctx.state.profile_text = await fallback_mcp_agent(
-            #     user_query=q.query,
-            #     chat_history=ctx.state.chat_history,
-            #     tool_registry=ctx.deps.opgg_client.tool_registry,
-            #     mcp_client=ctx.deps.opgg_client,
-            #     fallback_agent=ctx.deps.fallback_agent,
-            # allowed_tool_names=[
-            #     "lol_get_summoner_profile",
-            #     "lol_list_summoner_matches",
-            #     "lol_get_pro_player_riot_id",
-            # ],
-            # )
-            # ctx.state.used_fallback_tool_selection = True
-            ctx.state.allowed_tool_names = [
-                "lol_get_summoner_profile",
-                "lol_list_summoner_matches",
-                "lol_get_pro_player_riot_id",
-            ]
-            ctx.state.last_error = str(e)
-            ctx.state.failed_tool_name = "lol_get_summoner_profile"
-            return ErrorRecoveryNode()
-
-
-@dataclass
-class MatchHistoryAnalysisNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
-    async def run(
-        self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
-        # ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
-        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
-        q = ctx.state.parsed_query
-        assert q is not None
-
-        if q.riot_id is None:
-            return End(
-                FinalAnswer(
-                    answer="Please provide your Riot ID (for example, Pobelter#NA1) and region so I can analyze your profile."
-                )
-            )
-
-        result = await ctx.deps.opgg_client.list_summoner_matches(
-            riot_id=q.riot_id,
-            region=q.region if q.region else "na",
-            limit=10,
-        )
-        ctx.state.match_history_text = ctx.deps.opgg_client.extract_text(result)
-
-        return AggregationNode()
+#             # ctx.state.profile_text = await fallback_mcp_agent(
+#             #     user_query=q.query,
+#             #     chat_history=ctx.state.chat_history,
+#             #     tool_registry=ctx.deps.opgg_client.tool_registry,
+#             #     mcp_client=ctx.deps.opgg_client,
+#             #     fallback_agent=ctx.deps.fallback_agent,
+#             # allowed_tool_names=[
+#             #     "lol_get_summoner_profile",
+#             #     "lol_list_summoner_matches",
+#             #     "lol_get_pro_player_riot_id",
+#             # ],
+#             # )
+#             # ctx.state.used_fallback_tool_selection = True
+#             ctx.state.allowed_tool_names = [
+#                 "lol_get_summoner_profile",
+#                 "lol_list_summoner_matches",
+#                 "lol_get_pro_player_riot_id",
+#             ]
+#             ctx.state.last_error = str(e)
+#             ctx.state.failed_tool_name = "lol_get_summoner_profile"
+#             return ErrorRecoveryNode()
 
 
-@dataclass
-class ChampionMetaNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
-    async def run(
-        self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
-        # ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
-        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
-        q = ctx.state.parsed_query
-        assert q is not None
+# @dataclass
+# class MatchHistoryAnalysisNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
+#     async def run(
+#         self, ctx: GraphRunContext[AssistantState, GraphDeps]
+#     ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
+#         # ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
+#         # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
+#         q = ctx.state.parsed_query
+#         assert q is not None
 
-        # if not (q.champion and q.position):
-        if q.champion is None:
-            return End(
-                FinalAnswer(
-                    # answer="Please provide a Champion (for example, Ahri) and region so I can analyze your profile."
-                    answer="Please provide a Champion (for example, Ahri) so I can analyze your profile."
-                )
-            )
+#         if q.riot_id is None:
+#             return End(
+#                 FinalAnswer(
+#                     answer="Please provide your Riot ID (for example, Pobelter#NA1) and region so I can analyze your profile."
+#                 )
+#             )
 
-        result = await ctx.deps.opgg_client.get_champion_analysis(
-            champion=q.champion,
-            position=q.position.value if q.position else "none",
-        )
-        ctx.state.champion_meta_text = ctx.deps.opgg_client.extract_text(result)
+#         result = await ctx.deps.opgg_client.list_summoner_matches(
+#             riot_id=q.riot_id,
+#             region=q.region if q.region else "na",
+#             limit=10,
+#         )
+#         ctx.state.match_history_text = ctx.deps.opgg_client.extract_text(result)
 
-        return AggregationNode()
+#         return AggregationNode()
+
+
+# @dataclass
+# class ChampionMetaNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
+#     async def run(
+#         self, ctx: GraphRunContext[AssistantState, GraphDeps]
+#     ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
+#         # ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
+#         # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
+#         q = ctx.state.parsed_query
+#         assert q is not None
+
+#         # if not (q.champion and q.position):
+#         if q.champion is None:
+#             return End(
+#                 FinalAnswer(
+#                     # answer="Please provide a Champion (for example, Ahri) and region so I can analyze your profile."
+#                     answer="Please provide a Champion (for example, Ahri) so I can analyze your profile."
+#                 )
+#             )
+
+#         result = await ctx.deps.opgg_client.get_champion_analysis(
+#             champion=q.champion,
+#             position=q.position.value if q.position else "none",
+#         )
+#         ctx.state.champion_meta_text = ctx.deps.opgg_client.extract_text(result)
+
+#         return AggregationNode()
 
 
 @dataclass
@@ -285,11 +291,36 @@ class SkinSearchNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
             limit=6,
         )
 
-        # Save for downstream synthesis
+        # save for downstream synthesis
         ctx.state.rag_docs = retrieved_docs
 
-        # Optional: also flatten text for LLM
+        # also flatten text for LLM
         ctx.state.rag_text = "\n\n".join(doc.content for doc in retrieved_docs)
+
+        return AggregationNode()
+
+
+@dataclass
+class OPGG_MPC_Node(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
+    async def run(
+        self, ctx: GraphRunContext[AssistantState, GraphDeps]
+    ) -> AggregationNode | RecommendationNode:
+        print("### Starting OPGG_MPC_Node ###")
+
+        try:
+            opgg_mpc_text = await fallback_mcp_agent(
+                user_query=ctx.state.original_query,
+                chat_history=ctx.state.chat_history,
+                tool_registry=ctx.deps.opgg_client.tool_registry,
+                mcp_client=ctx.deps.opgg_client,
+                fallback_agent=ctx.deps.fallback_agent,
+                allowed_tool_names=ctx.state.allowed_tool_names,
+            )
+            ctx.state.used_fallback_tool_selection = True
+            ctx.state.opgg_mpc_text = opgg_mpc_text
+        except Exception as e:
+            print(e)
+            return RecommendationNode()
 
         return AggregationNode()
 
@@ -341,28 +372,28 @@ class SkinSearchNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
 #         return AggregationNode()
 
 
-@dataclass
-class MatchGuideNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
-    async def run(
-        self, ctx: GraphRunContext[AssistantState, GraphDeps]
-    ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
-        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
-        q = ctx.state.parsed_query
-        assert q is not None
+# @dataclass
+# class MatchGuideNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
+#     async def run(
+#         self, ctx: GraphRunContext[AssistantState, GraphDeps]
+#     ) -> AggregationNode | End[FinalAnswer] | ErrorRecoveryNode:
+#         # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer] | End[FinalAnswer]:
+#         q = ctx.state.parsed_query
+#         assert q is not None
 
-        if not (q.champion and q.opponent_champion and q.position):
-            return End(
-                FinalAnswer(
-                    # answer="Please provide a Champion (for example, Ahri) and region so I can analyze your profile."
-                    answer="Please provide a champion (for example, Ahri), opponent champion, and position so I can analyze your profile."
-                )
-            )
+#         if not (q.champion and q.opponent_champion and q.position):
+#             return End(
+#                 FinalAnswer(
+#                     # answer="Please provide a Champion (for example, Ahri) and region so I can analyze your profile."
+#                     answer="Please provide a champion (for example, Ahri), opponent champion, and position so I can analyze your profile."
+#                 )
+#             )
 
-        result = await ctx.deps.opgg_client.get_lane_matchup_guide(
-            my_champion=q.champion,
-            opponent_champion=q.opponent_champion,
-            position=q.position.value,
-        )
-        ctx.state.matchup_text = ctx.deps.opgg_client.extract_text(result)
+#         result = await ctx.deps.opgg_client.get_lane_matchup_guide(
+#             my_champion=q.champion,
+#             opponent_champion=q.opponent_champion,
+#             position=q.position.value,
+#         )
+#         ctx.state.matchup_text = ctx.deps.opgg_client.extract_text(result)
 
-        return AggregationNode()
+#         return AggregationNode()

@@ -18,11 +18,8 @@ from league_multi_tool_llm_agent.graph.agents import (
 )
 from league_multi_tool_llm_agent.graph.capability_nodes import (
     BuildInitialAssistantStateNode,
-    ChampionMetaNode,
-    MatchGuideNode,
-    MatchHistoryAnalysisNode,
+    OPGG_MPC_Node,
     ParseAndRouteNode,
-    ProfileAnalysisNode,
     PromptCacheCheckNode,
     RecommendationNode,
     ReturnCachedResponseNode,
@@ -65,17 +62,14 @@ def build_league_assistant_graph() -> Graph[AssistantState, GraphDeps, FinalAnsw
             PromptCacheCheckNode,
             ReturnCachedResponseNode,
             ParseAndRouteNode,
-            ProfileAnalysisNode,
-            MatchHistoryAnalysisNode,
-            ChampionMetaNode,
             RecommendationNode,
             SkinSearchNode,
-            MatchGuideNode,
-            AggregationNode,
+            OPGG_MPC_Node,
             SynthesisNode,
-            ReflectionNode,
             StorePromptCacheNode,
             ErrorRecoveryNode,
+            AggregationNode,
+            ReflectionNode,
             RevisionNode,
         ),
         state_type=AssistantState,
@@ -248,7 +242,7 @@ def format_debug_metadata(
 ) -> str:
     """Format graph metadata for the Gradio debug accordion."""
     lines = [
-        "### Debug Metadata",
+        "## Debug Metadata",
         f"- **Model:** `{model_name}`",
         f"- **Used cache:** `{getattr(final_answer, 'used_cache', None)}`",
         f"- **Intent:** `{getattr(final_answer, 'intent', None)}`",
@@ -274,7 +268,6 @@ def format_debug_metadata(
                 "",
                 "#### Synthesis",
                 pretty_format_metadata(synthesis_meta),
-                # f"```text\n{synthesis_meta}\n```",
             ]
         )
 
@@ -284,7 +277,6 @@ def format_debug_metadata(
                 "",
                 "#### Reflection",
                 pretty_format_metadata(reflection_meta),
-                # f"```text\n{reflection_meta}\n```",
             ]
         )
 
@@ -294,7 +286,6 @@ def format_debug_metadata(
                 "",
                 "#### Revision",
                 pretty_format_metadata(revision_meta),
-                # f"```text\n{revision_meta}\n```",
             ]
         )
 
@@ -311,6 +302,14 @@ async def run_graph_for_message_with_debug(
     state = AssistantState(
         original_query=message,
         chat_history=history_to_messages(history),
+        allowed_tool_names=[
+            "lol_get_summoner_profile",
+            "lol_list_summoner_matches",
+            "lol_get_champion_analysis",
+            "lol_get_lane_matchup_guide",
+            "lol_list_lane_meta_champions",
+            "lol_list_champion_details",
+        ],
     )
 
     deps = build_graph_deps_for_model(
@@ -398,7 +397,7 @@ def build_demo() -> gr.Blocks:
         chatbot = gr.Chatbot(
             label="League Assistant",
             # type="messages",
-            height=450,
+            height=500,
         )
 
         message_box = gr.Textbox(
