@@ -69,36 +69,25 @@ async def main() -> None:
 
     model = "qwen3.5:2b-q4_K_M"
     parser_agent = build_parser_agent(
-        # "gemma4:e2b-it-q4_K_M",
-        # "gemma3:4b-it-qat",
         model,
         ollama_provider_config=local_llm_config,
     )
     fallback_agent = build_fallback_agent(
-        # "gemma4:e4b-it-q4_K_M", ollama_provider_config=local_llm_config
-        # "gemma4:e2b-it-q4_K_M",
-        # "gemma3:4b-it-qat",
         model,
         ollama_provider_config=local_llm_config,
     )
 
     synthesis_agent = build_synthesis_agent(
-        # "gemma4:e4b-it-q4_K_M", ollama_provider_config=local_llm_config
-        # "gemma4:e2b-it-q4_K_M",
         model,
         ollama_provider_config=local_llm_config,
     )
 
     reflection_agent = build_reflection_agent(
-        # "gemma4:e4b-it-q4_K_M", ollama_provider_config=local_llm_config
-        # "gemma4:e2b-it-q4_K_M",
         model,
         ollama_provider_config=local_llm_config,
     )
 
     revision_agent = build_revision_agent(
-        # "gemma4:e4b-it-q4_K_M", ollama_provider_config=local_llm_config
-        # "gemma4:e2b-it-q4_K_M",
         model,
         ollama_provider_config=local_llm_config,
     )

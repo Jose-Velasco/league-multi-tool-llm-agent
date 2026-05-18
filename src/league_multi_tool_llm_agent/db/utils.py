@@ -62,25 +62,6 @@ def encode_image_to_base64(image_path: str) -> str:
     return base64.b64encode(data).decode("utf-8")
 
 
-# vision_settings = VisionSettings()
-
-
-# def image_path_to_data_url(image_path: str) -> str:
-#     path = Path(image_path)
-#     mime_type, _ = mimetypes.guess_type(path.name)
-#     mime_type = mime_type or "image/png"
-#     encoded = base64.b64encode(path.read_bytes()).decode("utf-8")
-#     return f"data:{mime_type};base64,{encoded}"
-
-
-# def image_path_to_data_url(image_path: Path) -> str:
-#     # path = Path(image_path)
-#     mime_type, _ = mimetypes.guess_type(image_path.name)
-#     mime_type = mime_type or "image/png"
-#     encoded = base64.b64encode(image_path.read_bytes()).decode("utf-8")
-#     return f"data:{mime_type};base64,{encoded}"
-
-
 def image_path_to_resized_data_url(image_path: Path, max_side: int = 512) -> str:
     # path = Path(image_path)
 
@@ -107,7 +88,7 @@ async def generate_skin_description(
     # image_data_url = image_path_to_data_url(root_skin_imgs_dir / image_path)
     image_data_url = image_path_to_resized_data_url(
         root_skin_imgs_dir / image_path,
-        max_side=512,  # 👈 tweak here only
+        max_side=512,
     )
 
     prompt = f"""
@@ -210,84 +191,10 @@ async def enrich_all_skin_descriptions(
     progress.close()
 
 
-# async def generate_skin_description(
-#     *,
-#     image_path: str,
-#     champion_name: str,
-#     skin_name: str,
-#     agent: Agent[None, SkinDescriptionOutput],
-#     skin_imgs_dir: Path,
-# ) -> str:
-
-#     image_bytes = (skin_imgs_dir / image_path).read_bytes()
-
-#     prompt = f"""
-#         Champion: {champion_name}
-#         Skin: {skin_name}
-
-#         Respond ONLY in JSON:
-#         {{
-#         "description": "..."
-#         }}
-#     """
-
-#     result = await agent.run(
-#         [
-#             # f"""
-#             # Champion: {champion_name}
-#             # Skin: {skin_name}
-#             # Generate a detailed visual description of this skin for semantic retrieval.
-#             # """,
-#             prompt,
-#             BinaryContent(
-#                 data=image_bytes,
-#                 media_type="image/png",  # adjust if needed
-#             ),
-#         ]
-#     )
-
-#     return result.output.description
-
-
-# async def generate_skin_description(
-#     *,
-#     image_path: str,
-#     champion_name: str,
-#     skin_name: str,
-#     agent: Agent[None, SkinDescriptionOutput],
-# ) -> str:
-#     image_b64 = encode_image_to_base64(image_path)
-
-#     prompt = f"""
-#         Champion: {champion_name}
-#         Skin: {skin_name}
-
-#         Generate a detailed visual description of this skin for semantic retrieval.
-#     """
-
-#     result = await agent.run(
-#         prompt,
-#         images=[image_b64],
-#     )
-
-#     return result.output.description
-
-
-# #####
 async def skin_to_doc(
     champion: Champion,
     skin: ChampionSkin,
-    # skin_description_agent: Agent[None, SkinDescriptionOutput],
-    # skin_imgs_dir: Path,
 ) -> dict[str, Any]:
-    # if not skin.skin_description and skin.img_path:
-    #     skin.skin_description = await generate_skin_description(
-    #         image_path=skin.img_path,
-    #         champion_name=champion.name,
-    #         skin_name=skin.skin_name,
-    #         agent=skin_description_agent,
-    #         skin_imgs_dir=skin_imgs_dir,
-    #     )
 
     parts = [
         f"Champion: {champion.name}",
@@ -314,45 +221,8 @@ async def skin_to_doc(
     }
 
 
-# async def skin_to_doc(champion: dict[str, Any], skin: dict[str, Any]) -> dict[str, Any]:
-#     skin_verified = ChampionSkin.model_validate(skin)
-#     skin_description = await ensure_skin_description(
-#         skin_verified, skin_verified.champion_name
-#     )
-
-#     parts = [
-#         f"Champion: {champion['name']}",
-#         f"Main role: {champion['main_role']}",
-#         f"Skin: {skin['skin_name']}",
-#     ]
-
-#     if skin.get("skin_description"):
-#         parts.append(f"Skin description: {skin_description}")
-
-#     content = "\n".join(parts)
-
-#     return {
-#         "doc_type": "champion_skin",
-#         "champion_name": champion["name"],
-#         "skin_name": skin["skin_name"],
-#         "main_role": champion["main_role"],
-#         "difficulty": champion["difficulty"]["difficulty"],
-#         "source_url": str(skin["img_url"]),
-#         "content": content,
-#         "metadata": {
-#             "champion_name": champion["name"],
-#             "img_url": str(skin["img_url"]),
-#             "img_path": skin.get("img_path"),
-#             "skin_description": skin.get("skin_description"),
-#         },
-#     }
-
-
-#############
 async def build_rag_docs(
-    # champions: list[dict[str, Any]],
     champions: list[Champion],
-    # skin_description_agent: Agent[None, SkinDescriptionOutput] | None,
     skin_imgs_dir: Path,
 ) -> list[dict[str, Any]]:
     docs: list[dict[str, Any]] = []
@@ -381,7 +251,6 @@ async def build_rag_docs(
 
 
 def load_jsonl(path: str | Path) -> list[Champion]:
-    # rows: list[dict[str, Any]] = []
     rows: list[Champion] = []
     with Path(path).open("r", encoding="utf-8") as f:
         for line in f:

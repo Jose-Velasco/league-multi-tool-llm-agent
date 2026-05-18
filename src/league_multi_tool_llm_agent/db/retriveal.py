@@ -20,22 +20,3 @@ def search_similar(engine, query_embedding: list[float], limit: int = 5):
             },
         )
         return result.fetchall()
-
-
-# def search_similar(engine, query_embedding: list[float], limit: int = 5):
-#     with Session(engine) as session:
-#         sql = text("""
-#             SELECT id, doc_type, champion_name, skin_name, content, metadata,
-#                    embedding <=> CAST(:embedding AS vector) AS distance
-#             FROM rag_documents
-#             ORDER BY embedding <=> CAST(:embedding AS vector)
-#             LIMIT :limit
-#         """)
-#         result = session.exec(
-#             sql,
-#             params={
-#                 "embedding": str(query_embedding),
-#                 "limit": limit,
-#             },
-#         )
-#         return result.all()

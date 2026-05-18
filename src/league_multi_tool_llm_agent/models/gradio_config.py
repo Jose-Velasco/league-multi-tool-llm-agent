@@ -28,7 +28,6 @@ class GradioAppSettings(BaseSettings):
 
     SMALL_MODEL: str = "qwen3.5:2b-q4_K_M"
     LARGE_MODEL: str = "gemma4:e4b-it-q4_K_M"
-    # DEFAULT_MODEL: str = "qwen3.5:2b-q4_K_M"
     DEFAULT_MODEL: str = "gemma4:e4b-it-q4_K_M"
 
     GRADIO_SHARE: bool = True

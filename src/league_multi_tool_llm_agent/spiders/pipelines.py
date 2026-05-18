@@ -157,19 +157,13 @@ class ToJsonPipeline:
     to serialize for us. Add more as needed.
 
 
-    Spider
+    1. Spider
 
-    ↓
+    2. ChampionImagePipeline (needs Pydantic)
 
-    ChampionImagePipeline (needs Pydantic)
+    3. ToJsonPipeline (convert to dict)
 
-    ↓
-
-    ToJsonPipeline (convert to dict)
-
-    ↓
-
-    FeedExporter (JSONL)
+    4. FeedExporter (JSONL)
     """
 
     def process_item(self, item):

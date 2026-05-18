@@ -12,16 +12,6 @@ from league_multi_tool_llm_agent.graph.prompt_cache import PromptCache
 from league_multi_tool_llm_agent.integrations.opgg import OPGGMCPClient
 from league_multi_tool_llm_agent.models.rag_models import RagSearchResult
 
-# class IntentType(StrEnum):
-#     PROFILE_ANALYSIS = "profile_analysis"
-#     MATCH_HISTORY_ANALYSIS = "match_history_analysis"
-#     CHAMPION_META = "champion_meta"
-#     CHAMPION_RECOMMENDATION = "champion_recommendation"
-#     SKIN_SEARCH = "skin_search"
-#     MATCHUP_GUIDE = "matchup_guide"
-#     CACHED_RESPONSE = "cached_response"
-#     ERROR = "error"
-
 
 class IntentType(StrEnum):
     CHAMPION_RECOMMENDATION = "champion_recommendation"
@@ -147,11 +137,6 @@ class SynthesizedAnswer(BaseModel):
         le=1.0,
         description="Confidence that the answer satisfies the user request.",
     )
-    # confidence: float = Field(
-    #     ge=0.0,
-    #     le=1.0,
-    #     description="Confidence that the answer satisfies the user request.",
-    # )
 
 
 class ReflectionResult(BaseModel):

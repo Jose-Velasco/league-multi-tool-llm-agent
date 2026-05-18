@@ -25,7 +25,6 @@ class RagService:
         return await self.embedder.embed(query)
 
     # async def embed_query(self, query: str) -> list[float]:
-    #     print(f"#########{self.settings}#################")
     #     response = await aembedding(
     #         model=self.settings.EMBEDDING_MODEL,
     #         input=[query],

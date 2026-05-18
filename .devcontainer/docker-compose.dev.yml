@@ -5,7 +5,6 @@ services:
     build:
       context: ..
       dockerfile: .devcontainer/Dockerfile
-    # container_name: league-multi-tool-llm-agent-dev
     volumes:
       - ..:/home/dev/src:cached
       # Use a uv cache volume mounted to /home/vscode/.cache/uv so installs are fast across container rebuilds.
@@ -31,11 +30,8 @@ services:
     command: sleep infinity
     networks:
       - league-multi-tool-llm-agent-network
-    # env_file:
-    #   - ../.env
 
   postgres:
-    # container_name: postgres-league-multi-tool-llm-agent
     image: pgvector/pgvector:pg14
     restart: unless-stopped
     environment:
@@ -54,7 +50,7 @@ services:
       retries: 3
     networks:
       - league-multi-tool-llm-agent-network
-  
+
   ollama:
     build:
       context: ../ollama
@@ -72,7 +68,6 @@ volumes:
   uv-cache-league-multi-tool-llm-agent:
   postgres-league-multi-tool-llm-agent:
   ollama-models:
-
 
 networks:
   league-multi-tool-llm-agent-network:

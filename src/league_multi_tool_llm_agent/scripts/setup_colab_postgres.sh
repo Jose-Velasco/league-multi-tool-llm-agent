@@ -11,7 +11,6 @@ apt-get install -y postgresql postgresql-contrib postgresql-server-dev-all
 apt-get install -y git build-essential postgresql-server-dev-14
 
 cd /content
-# rm -rf pgvector
 git clone --branch v0.8.0 https://github.com/pgvector/pgvector.git
 cd /content/pgvector
 make

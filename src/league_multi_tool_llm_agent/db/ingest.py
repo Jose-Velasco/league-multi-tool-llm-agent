@@ -13,7 +13,6 @@ from league_multi_tool_llm_agent.db.llm_utils import (
 from league_multi_tool_llm_agent.db.rag_db_model import RagDocument, create_vector_index
 from league_multi_tool_llm_agent.db.utils import (
     build_rag_docs,
-    # enrich_all_skin_descriptions,
     load_jsonl,
 )
 from league_multi_tool_llm_agent.models.agent_config import OllamaProviderConfig
@@ -79,16 +78,6 @@ async def ingest_jsonl_to_pgvector(
     create_db(engine)
 
     champions = load_jsonl(jsonl_path)
-
-    # skin_description_agent = build_skin_description_agent(
-    #     image_analyzer_model_name, ollama_config
-    # )
-
-    # await enrich_all_skin_descriptions(
-    #     champions=champions,
-    #     vision_settings=vision_settings,
-    #     root_skin_imgs_dir=skin_imgs_dir,
-    # )
 
     rag_docs = await build_rag_docs(
         champions,

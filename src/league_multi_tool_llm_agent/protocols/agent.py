@@ -58,7 +58,7 @@ class LiteLLMRecommendationClient:
         return self.extract_litellm_text(response)
 
     def extract_litellm_text(self, response) -> str:
-        """Extract text from LiteLLM response, including reasoning-model outputs."""
+        """Extract text from LiteLLM response, including model outputs."""
         message = response["choices"][0]["message"]
 
         content = getattr(message, "content", None)

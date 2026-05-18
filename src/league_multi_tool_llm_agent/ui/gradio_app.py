@@ -211,16 +211,7 @@ def pretty_format_metadata(obj: object) -> str:
     if obj is None or not isinstance(obj, BaseModel):
         return "None"
 
-    # Pydantic model
-    # if isinstance(obj, BaseModel):
     data = obj.model_dump()
-
-    # # Dataclass
-    # elif hasattr(obj, "__dict__"):
-    #     data = vars(obj)
-
-    # else:
-    #     return pformat(obj, indent=2, width=100)
 
     lines: list[str] = []
 
@@ -421,10 +412,7 @@ def build_demo() -> gr.Blocks:
         async def submit_message(
             message: str,
             history: list[dict[str, str]],
-            # history: list[list[str]],
-            # model_name: str,
         ) -> tuple[str, list[dict[str, str]], str]:
-            # ) -> tuple[str, list[list[str]], str]:
             """Handle one chat submission and update debug panel."""
             if not message.strip():
                 return "", history or [], "No message submitted."
@@ -511,4 +499,4 @@ if __name__ == "__main__":
         server_name=services.settings.GRADIO_SERVER_NAME,
         server_port=services.settings.GRADIO_SERVER_PORT,
     )
-# OLLAMA_BASE_URL=http://localhost:11434/v1/ uv run src/league_multi_tool_llm_agent/ui/gradio_app.py
+# uv run src/league_multi_tool_llm_agent/ui/gradio_app.py

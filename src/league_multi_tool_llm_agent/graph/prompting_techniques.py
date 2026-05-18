@@ -47,25 +47,6 @@ def handle_prompt_cache(
     return True
 
 
-# def handle_prompt_cache(
-#     prompt_cache: PromptCache,
-#     final_response: str,
-#     cache_key: str,
-#     reflection_node_metadata: ReflectionResult | None,
-#     revision_answer_node_metadata: RevisedAnswer | None,
-# ) -> None:
-#     cache_key_normalized = cache_key.lower()
-#     cache_key_normalized = re.sub(r"[^\w\s]", "", cache_key_normalized)
-#     if reflection_node_metadata and reflection_node_metadata.approved:
-#         prompt_cache.insert(cache_key_normalized, final_response)
-#     elif reflection_node_metadata and reflection_node_metadata.needs_revision:
-#         if (
-#             revision_answer_node_metadata
-#             and revision_answer_node_metadata.addressed_issues
-#         ):
-#             prompt_cache.insert(cache_key_normalized, final_response)
-
-
 @dataclass
 class StorePromptCacheNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     async def run(
@@ -80,8 +61,6 @@ class StorePromptCacheNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
                 reflection_node_metadata=ctx.state.reflection_node_metadata,
                 revision_answer_node_metadata=ctx.state.revision_answer_node_metadata,
             )
-
-            # ctx.deps.prompt_cache.insert(ctx.state.cache_key or "", final)
 
         return End(
             FinalAnswer(
@@ -105,23 +84,6 @@ class RevisionNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
     ) -> StorePromptCacheNode:
         # print("### Starting RevisionNode ###")
 
-        # ) -> BaseNode[AssistantState, GraphDeps, FinalAnswer]:
-        # ctx.state.final_answer = await llm_reflect(ctx.state.draft_answer or "")
-        # prompt = f"""Original User Query:
-        # {ctx.state.original_query}
-
-        # Original Draft Answer:
-        # {ctx.state.draft_answer}
-
-        # parsed_intent context:
-        # {ctx.state.parsed_intent.model_dump_json() if ctx.state.parsed_intent else "No parsed_intent context provided"}
-
-        # Reflection Feedback:
-        # {ctx.state.reflection_node_metadata.model_dump_json() if ctx.state.reflection_node_metadata else "ReflectionResult metadata not provided."}
-
-        # pipeline context:
-        # {asdict(ctx.state)}
-        # """
         prompt = f"""Original User Query:
         {ctx.state.original_query}
 
@@ -139,11 +101,7 @@ class RevisionNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
         try:
             response_result = await ctx.deps.revision_agent.run(prompt)
             result = response_result.output
-            # ctx.state.revision_answer_node_metadata = result.output
-            # ctx.state.final_answer = result.output.revised_answer
         except Exception:
-            # print("Revision failed.")
-
             fall_back_answer = "I ran into an issue while revising my response for that request. Try rephrasing it or asking for a champion recommendation, skin search, or playstyle suggestion."
             if ctx.state.synthesis_node_metadata:
                 fall_back_answer = ctx.state.synthesis_node_metadata.answer
@@ -185,8 +143,6 @@ class ReflectionNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
         Evaluate the answer.
         """
 
-        # ctx.state.final_answer = await llm_reflect(ctx.state.draft_answer or "")
-        # result = await ctx.deps.reflection_agent.run(ctx.state.draft_answer or "")
         result = await ctx.deps.reflection_agent.run(prompt)
         ctx.state.reflection_node_metadata = result.output
 
@@ -214,12 +170,7 @@ class SynthesisNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
         merged_context_blocks:
         {joined}
         """
-        # prompt = f""" pipeline context:
-        # {asdict(ctx.state)}
 
-        # merged_context_blocks:
-        # {joined}
-        # """
         result = await ctx.deps.synthesis_agent.run(prompt)
         ctx.state.draft_answer = result.output.answer
         ctx.state.synthesis_node_metadata = result.output
