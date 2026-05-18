@@ -359,7 +359,7 @@ def build_demo() -> gr.Blocks:
     settings = services.settings
 
     model_choices = [
-        settings.SMALL_MODEL,
+        # settings.SMALL_MODEL,
         settings.LARGE_MODEL,
     ]
 
@@ -386,13 +386,13 @@ def build_demo() -> gr.Blocks:
             """
         )
 
-        with gr.Row():
-            model_choice = gr.Dropdown(
-                choices=model_choices,
-                value=settings.DEFAULT_MODEL,
-                label="Model",
-                info="Toggle between smaller and larger local LLMs.",
-            )
+        # with gr.Row():
+        # model_choice = gr.Dropdown(
+        #     choices=model_choices,
+        #     value=settings.DEFAULT_MODEL,
+        #     label="Model",
+        #     info="Toggle between smaller and larger local LLMs.",
+        # )
 
         chatbot = gr.Chatbot(
             label="League Assistant",
@@ -410,19 +410,19 @@ def build_demo() -> gr.Blocks:
             submit_btn = gr.Button("Send", variant="primary")
             clear_btn = gr.Button("Clear")
 
-        with gr.Accordion("Debug Metadata", open=False, elem_id="debug-accordion"):
-            debug_output = gr.Markdown("No debug info yet.")
-
         gr.Examples(
             examples=settings.EXAMPLES,
             inputs=message_box,
         )
 
+        with gr.Accordion("Debug Metadata", open=False, elem_id="debug-accordion"):
+            debug_output = gr.Markdown("No debug info yet.")
+
         async def submit_message(
             message: str,
             history: list[dict[str, str]],
             # history: list[list[str]],
-            model_name: str,
+            # model_name: str,
         ) -> tuple[str, list[dict[str, str]], str]:
             # ) -> tuple[str, list[list[str]], str]:
             """Handle one chat submission and update debug panel."""
@@ -442,7 +442,8 @@ def build_demo() -> gr.Blocks:
                 message=message,
                 history=history,
                 services=services,
-                model_name=model_name,
+                # model_name=model_name,
+                model_name=settings.DEFAULT_MODEL,
             )
 
             history.append(
@@ -456,12 +457,14 @@ def build_demo() -> gr.Blocks:
             # history.append([message, answer])
             return "", history, debug_text
 
+        # model_choice = settings.DEFAULT_MODEL
+
         submit_btn.click(
             fn=submit_message,
             inputs=[
                 message_box,
                 chatbot,
-                model_choice,
+                # model_choice,
             ],
             outputs=[
                 message_box,
@@ -475,7 +478,7 @@ def build_demo() -> gr.Blocks:
             inputs=[
                 message_box,
                 chatbot,
-                model_choice,
+                # model_choice,
             ],
             outputs=[
                 message_box,
@@ -508,3 +511,4 @@ if __name__ == "__main__":
         server_name=services.settings.GRADIO_SERVER_NAME,
         server_port=services.settings.GRADIO_SERVER_PORT,
     )
+# OLLAMA_BASE_URL=http://localhost:11434/v1/ uv run src/league_multi_tool_llm_agent/ui/gradio_app.py

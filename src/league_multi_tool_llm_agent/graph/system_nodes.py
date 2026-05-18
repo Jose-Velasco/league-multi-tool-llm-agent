@@ -39,8 +39,8 @@ def build_error_message_agent(
     return Agent(
         model=model,
         output_type=FriendlyErrorResponse,
-        # retries=2,
-        output_retries=2,
+        retries=3,
+        output_retries=4,
         instructions=(
             "You convert internal tool errors into short, helpful, non-technical user messages. "
             "Do not expose stack traces. "

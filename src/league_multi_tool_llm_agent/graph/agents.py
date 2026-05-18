@@ -58,8 +58,8 @@ def build_parser_agent(
 
     return Agent(
         model=model,
-        # retries=2,
-        output_retries=2,
+        retries=3,
+        output_retries=3,
         output_type=ParsedIntent,
         instructions=(
             "You parse League of Legends assistant user requests into structured intent.\n\n"
@@ -124,8 +124,8 @@ def build_synthesis_agent(
 
     return Agent(
         model=model,
-        # retries=2,
-        output_retries=2,
+        retries=3,
+        output_retries=3,
         output_type=SynthesizedAnswer,
         model_settings=ModelSettings(
             thinking=False,
@@ -139,6 +139,10 @@ def build_synthesis_agent(
             "- tool outputs, if provided\n\n"
             "Response goals:\n"
             "- Recommend 2-3 champions or skins when the user asks for recommendations.\n"
+            "Examples:\n"
+            "- Arcane fans may enjoy Jinx, Vi, Caitlyn, Viktor, or Ekko.\n"
+            "- Dark aesthetics may align with Morgana, Evelynn, Vex, or Nocturne.\n"
+            "- Strong female leads may align with Irelia, Leona, Diana, or Samira.\n"
             "- Explain why each recommendation fits the user's preferences.\n"
             "- If retrieved context is provided, use it and do not contradict it.\n"
             "- If tool output is provided, treat it as higher priority than general knowledge.\n"
@@ -224,8 +228,8 @@ def build_reflection_agent(
 
     return Agent(
         model=model,
-        # retries=2,
-        output_retries=2,
+        retries=3,
+        output_retries=3,
         output_type=ReflectionResult,
         model_settings=ModelSettings(
             thinking=False,
@@ -335,8 +339,8 @@ def build_revision_agent(
 
     return Agent(
         model=model,
-        # retries=2,
-        output_retries=2,
+        retries=3,
+        output_retries=3,
         output_type=RevisedAnswer,
         instructions=(
             "You are a revision agent for a League of Legends virtual assistant.\n\n"

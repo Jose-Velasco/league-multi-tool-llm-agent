@@ -119,12 +119,12 @@ class ParseAndRouteNode(BaseNode[AssistantState, GraphDeps, FinalAnswer]):
         if parsed_intent.intent == IntentType.CHAMPION_RECOMMENDATION:
             return RecommendationNode()
 
-        if parsed_intent.intent == IntentType.CHAMPION_RECOMMENDATION:
-            return OPGG_MPC_Node()
+        # if parsed_intent.intent == IntentType.CHAMPION_RECOMMENDATION:
+        #     return OPGG_MPC_Node()
 
-        # print("### ParseAndRouteNode falling back to OPGG_MPC_Node ###")
+        # print("### ParseAndRouteNode falling back to RecommendationNode ###")
 
-        return OPGG_MPC_Node()
+        return RecommendationNode()
 
 
 # @dataclass

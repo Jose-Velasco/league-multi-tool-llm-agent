@@ -167,8 +167,8 @@ def build_fallback_agent(
 
     return Agent(
         model=model,
-        output_retries=3,
-        retries=3,
+        output_retries=4,
+        retries=4,
         output_type=MCPToolSelection,
         instructions=instructions,
     )
