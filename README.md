@@ -68,6 +68,32 @@ This project uses:
 
 The Dev Container is configured to use the `app` service and open the workspace at `/home/dev/src`. It also runs `.devcontainer/postCreate.sh` after the container is created.
 
+## First Startup Notes
+
+On the first launch, the Ollama container automatically downloads the required local models:
+
+- `qwen3-embedding:0.6b`
+- `gemma4:e4b-it-q4_K_M`
+- `qwen3.5:2b-q4_K_M`
+
+**These downloads may take several minutes depending on internet speed**. During this process, the Ollama container logs may repeatedly print:
+
+```bash
+Waiting for ollama...
+```
+
+This is expected behavior while the Ollama server initializes and models are being downloaded.
+
+The initial startup is significantly slower than later launches because the models are cached inside the Docker volume after the first successful run.
+
+You can monitor progress with:
+
+```bash
+docker compose logs -f ollama
+```
+
+Once model downloads complete, the Gradio UI and backend should become responsive.
+
 ---
 
 ## Option 1: VS Code Dev Containers (Recommended)
@@ -109,6 +135,7 @@ ollama
 
 PostgreSQL is available on port 5432, and Ollama is available on port 11434.
 
+
 ## Option 2: Manual Docker Compose Setup
 
 You can also start the development stack manually:
@@ -126,6 +153,19 @@ If the container name differs, check running containers with:
 Once inside the container, install dependencies **if needed**:
 
 `uv sync --frozen`
+
+## Running the League Multi-Tool LLM Agent
+
+After setting up using Option 1 or 2, running the Agent UI using Gradio by follow the below:
+
+1. Run in the built container (league-multi-tool-llm-agent-dev-app) in the root project directory:
+    - All three models need to complete download to run the Agent Gradio UI properly
+    - refer to the section **First Startup Notes** for more info
+
+```bash
+uv run ./src/league_multi_tool_llm_agent/ui/gradio_app.py 
+```
+
 
 ## Ollama
 

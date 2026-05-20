@@ -1,4 +1,3 @@
-# might not longer be needed
 #!/usr/bin/env bash
 set -e
 

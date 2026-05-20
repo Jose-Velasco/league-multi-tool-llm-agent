@@ -11,10 +11,7 @@ sudo chown -R vscode:vscode /home/vscode/.cache/uv
 # Sync project deps from uv.lock (creates .venv automatically)
 uv sync --frozen
 
-# Install *this repo* as a package (src-layout)
-# uv pip install -e .
-
-# NLTK punkt required for chunking
-# uv run python -c "import nltk; nltk.download('punkt_tab')"
+# Install this repo as a package (src-layout)
+uv pip install -e .
 
 echo "✅ Devcontainer ready."
