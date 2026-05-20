@@ -49,7 +49,8 @@ def build_judge_agent(
     return Agent(
         model=model,
         output_type=JudgeScore,
-        retries=3,
+        retries=4,
+        output_retries=4,
         instructions=(
             "You are evaluating a League of Legends recommendation system.\n"
             "Return ONLY valid JSON.\n"
